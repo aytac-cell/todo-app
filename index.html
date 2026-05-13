@@ -654,8 +654,11 @@ async function openShareModal() {
   await renderMembers();
 }
 function closeShareModal(e) {
-  if (!e || e.target===el('shareModal')) el('shareModal').classList.remove('open');
+  if (!e || e.target===el('shareModal')) {
+    el('shareModal').classList.remove('open');
+  }
 }
+document.addEventListener('keydown', e => { if (e.key==='Escape') closeShareModal(); });
 async function renderMembers() {
   const { data, error } = await db.rpc('get_space_members', { p_space_id: currentSpaceId });
   if (error) return;
