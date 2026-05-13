@@ -45,9 +45,12 @@ Deno.serve(async (req) => {
     })
 
     if (invErr) {
-      // Kullanıcı zaten kayıtlıysa invite hata verir ama bizim DB kaydımız zaten var
-      // Sadece loglayıp devam et
-      console.warn('inviteUserByEmail:', invErr.message)
+      // "User already registered" hatası kabul edilebilir — DB kaydımız zaten var
+      if (!invErr.message.includes('already')) {
+        console.error('inviteUserByEmail:', invErr.message)
+        return json({ error: invErr.message }, 400)
+      }
+      console.warn('User already registered, skipping invite email:', invited_email)
     }
 
     return json({ ok: true })
