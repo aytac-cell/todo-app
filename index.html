@@ -6,7 +6,7 @@
   <title>Yapılacaklar</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -19,380 +19,557 @@
 
     .container { width: 100%; max-width: 500px; }
 
-    h1 {
-      text-align: center;
-      color: #1a1a2e;
-      font-size: 2rem;
-      margin-bottom: 24px;
-      letter-spacing: -0.5px;
-    }
-
-    .lang-toggle {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 16px;
-      gap: 4px;
-    }
-
+    /* ── Lang toggle ── */
+    .lang-toggle { display: flex; justify-content: flex-end; margin-bottom: 16px; gap: 4px; }
     .lang-toggle button {
-      padding: 4px 10px;
-      border: 2px solid #e0e0e0;
-      border-radius: 6px;
-      background: #fff;
-      cursor: pointer;
-      font-size: 0.8rem;
-      color: #888;
-      transition: all 0.2s;
+      padding: 4px 10px; border: 2px solid #e0e0e0; border-radius: 6px;
+      background: #fff; cursor: pointer; font-size: 0.8rem; color: #888; transition: all 0.2s;
+    }
+    .lang-toggle button.active { border-color: #6c63ff; background: #6c63ff; color: #fff; }
+
+    /* ── Auth card ── */
+    .auth-card {
+      background: #fff; border-radius: 16px; padding: 32px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 0;
+    }
+    .auth-card h2 { text-align: center; color: #1a1a2e; font-size: 1.5rem; margin-bottom: 8px; }
+    .auth-card p.subtitle { text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 24px; }
+
+    .tabs { display: flex; margin-bottom: 24px; border-bottom: 2px solid #f0f2f5; }
+    .tabs button {
+      flex: 1; padding: 10px; border: none; background: none;
+      cursor: pointer; font-size: 0.95rem; color: #aaa;
+      border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s;
+    }
+    .tabs button.active { color: #6c63ff; border-bottom-color: #6c63ff; font-weight: 600; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 0.82rem; color: #555; margin-bottom: 6px; font-weight: 500; }
+    .form-group input {
+      width: 100%; padding: 11px 14px; border: 2px solid #e0e0e0; border-radius: 10px;
+      font-size: 0.97rem; outline: none; transition: border-color 0.2s;
+    }
+    .form-group input:focus { border-color: #6c63ff; }
+
+    /* OTP inputs */
+    .otp-row { display: flex; gap: 10px; justify-content: center; margin: 8px 0 16px; }
+    .otp-row input {
+      width: 48px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700;
+      border: 2px solid #e0e0e0; border-radius: 10px; outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .otp-row input:focus { border-color: #6c63ff; box-shadow: 0 0 0 3px rgba(108,99,255,0.15); }
+    .otp-row input.filled { border-color: #6c63ff; background: #f5f4ff; }
+
+    .btn-primary {
+      width: 100%; padding: 13px; background: #6c63ff; color: #fff;
+      border: none; border-radius: 10px; font-size: 1rem; font-weight: 600;
+      cursor: pointer; transition: background 0.2s, transform 0.1s;
+      margin-top: 4px;
+    }
+    .btn-primary:hover { background: #574fd6; }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:disabled { background: #c4c0f7; cursor: not-allowed; transform: none; }
+
+    .btn-link {
+      background: none; border: none; color: #6c63ff; cursor: pointer;
+      font-size: 0.85rem; text-decoration: underline; padding: 0;
     }
 
-    .lang-toggle button.active {
-      border-color: #6c63ff;
-      background: #6c63ff;
-      color: #fff;
+    .resend-row { text-align: center; margin-top: 16px; color: #aaa; font-size: 0.85rem; }
+
+    /* ── Error / info msg ── */
+    .msg {
+      padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 16px; display: none;
     }
+    .msg.error { background: #fee; border: 1px solid #fcc; color: #c33; }
+    .msg.info  { background: #eef; border: 1px solid #ccf; color: #339; }
+
+    /* ── Todo app ── */
+    .todo-wrap { display: none; }
+
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+    }
+    .topbar h1 { color: #1a1a2e; font-size: 1.8rem; letter-spacing: -0.5px; }
+    .topbar .user-info { font-size: 0.8rem; color: #aaa; text-align: right; }
+    .topbar .user-info span { display: block; font-weight: 600; color: #555; }
+
+    .btn-logout {
+      background: none; border: 1px solid #e0e0e0; border-radius: 8px;
+      color: #aaa; cursor: pointer; font-size: 0.8rem; padding: 5px 12px;
+      margin-top: 6px; transition: all 0.2s;
+    }
+    .btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
 
     .input-row { display: flex; gap: 8px; margin-bottom: 16px; }
-
     .input-row input {
-      flex: 1;
-      padding: 12px 16px;
-      border: 2px solid #e0e0e0;
-      border-radius: 10px;
-      font-size: 1rem;
-      outline: none;
-      transition: border-color 0.2s;
-      background: #fff;
+      flex: 1; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 10px;
+      font-size: 1rem; outline: none; transition: border-color 0.2s; background: #fff;
     }
-
     .input-row input:focus { border-color: #6c63ff; }
-
     .input-row button {
-      padding: 12px 20px;
-      background: #6c63ff;
-      color: #fff;
-      border: none;
-      border-radius: 10px;
-      font-size: 1.4rem;
-      cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
+      padding: 12px 20px; background: #6c63ff; color: #fff; border: none;
+      border-radius: 10px; font-size: 1.4rem; cursor: pointer; transition: background 0.2s, transform 0.1s;
     }
-
     .input-row button:hover { background: #574fd6; }
     .input-row button:active { transform: scale(0.95); }
 
     .filters { display: flex; gap: 8px; margin-bottom: 16px; }
-
     .filters button {
-      flex: 1;
-      padding: 8px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      background: #fff;
-      cursor: pointer;
-      font-size: 0.85rem;
-      color: #555;
-      transition: all 0.2s;
+      flex: 1; padding: 8px; border: 2px solid #e0e0e0; border-radius: 8px;
+      background: #fff; cursor: pointer; font-size: 0.85rem; color: #555; transition: all 0.2s;
     }
-
-    .filters button.active {
-      border-color: #6c63ff;
-      background: #6c63ff;
-      color: #fff;
-    }
+    .filters button.active { border-color: #6c63ff; background: #6c63ff; color: #fff; }
 
     .todo-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
-
     .todo-item {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      background: #fff;
-      padding: 14px 16px;
-      border-radius: 10px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      display: flex; align-items: center; gap: 12px; background: #fff;
+      padding: 14px 16px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
       animation: fadeIn 0.2s ease;
     }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
 
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-6px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    .todo-item input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      accent-color: #6c63ff;
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-
-    .todo-item span {
-      flex: 1;
-      font-size: 0.97rem;
-      color: #222;
-      word-break: break-word;
-    }
-
-    .todo-item.done span { text-decoration: line-through; color: #aaa; }
-
+    .todo-item input[type="checkbox"] { width:18px; height:18px; accent-color:#6c63ff; cursor:pointer; flex-shrink:0; }
+    .todo-item span { flex:1; font-size:0.97rem; color:#222; word-break:break-word; }
+    .todo-item.done span { text-decoration:line-through; color:#aaa; }
     .todo-item .delete-btn {
-      background: none;
-      border: none;
-      cursor: pointer;
-      color: #ccc;
-      font-size: 1.1rem;
-      padding: 4px;
-      border-radius: 6px;
-      transition: color 0.2s;
-      flex-shrink: 0;
+      background:none; border:none; cursor:pointer; color:#ccc; font-size:1.1rem;
+      padding:4px; border-radius:6px; transition:color 0.2s; flex-shrink:0;
     }
+    .todo-item .delete-btn:hover { color:#e74c3c; }
 
-    .todo-item .delete-btn:hover { color: #e74c3c; }
-
-    .empty { text-align: center; color: #bbb; font-size: 0.95rem; padding: 32px 0; }
-    .summary { text-align: center; color: #999; font-size: 0.82rem; margin-top: 16px; }
+    .empty   { text-align:center; color:#bbb; font-size:0.95rem; padding:32px 0; }
+    .loading { text-align:center; color:#aaa; padding:32px 0; font-size:0.9rem; }
+    .summary { text-align:center; color:#999; font-size:0.82rem; margin-top:16px; }
 
     .clear-btn {
-      display: block;
-      margin: 12px auto 0;
-      padding: 6px 16px;
-      background: none;
-      border: 1px solid #e0e0e0;
-      border-radius: 8px;
-      color: #aaa;
-      cursor: pointer;
-      font-size: 0.82rem;
-      transition: all 0.2s;
+      display:block; margin:12px auto 0; padding:6px 16px; background:none;
+      border:1px solid #e0e0e0; border-radius:8px; color:#aaa; cursor:pointer;
+      font-size:0.82rem; transition:all 0.2s;
     }
+    .clear-btn:hover { border-color:#e74c3c; color:#e74c3c; }
 
-    .clear-btn:hover { border-color: #e74c3c; color: #e74c3c; }
-
-    .loading { text-align: center; color: #aaa; padding: 32px 0; font-size: 0.9rem; }
-
-    .error-msg {
-      background: #fee;
-      border: 1px solid #fcc;
-      color: #c33;
-      padding: 10px 14px;
-      border-radius: 8px;
-      font-size: 0.85rem;
-      margin-bottom: 12px;
-      display: none;
-    }
+    .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="lang-toggle">
-      <button id="btnTR" onclick="setLang('tr')">TR</button>
-      <button id="btnEN" onclick="setLang('en')">EN</button>
+<div class="container">
+
+  <!-- Lang toggle -->
+  <div class="lang-toggle">
+    <button id="btnTR" onclick="setLang('tr')">TR</button>
+    <button id="btnEN" onclick="setLang('en')">EN</button>
+  </div>
+
+  <!-- ── AUTH ── -->
+  <div id="authWrap" class="auth-card">
+    <div id="msgBox" class="msg"></div>
+
+    <!-- Sign in / Sign up tabs -->
+    <div id="formSection">
+      <div class="tabs">
+        <button id="tabSignin" onclick="switchTab('signin')" class="active"></button>
+        <button id="tabSignup" onclick="switchTab('signup')"></button>
+      </div>
+
+      <div class="form-group">
+        <label id="lblEmail"></label>
+        <input type="email" id="emailInput" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label id="lblPassword"></label>
+        <input type="password" id="passwordInput" autocomplete="current-password">
+      </div>
+
+      <button class="btn-primary" id="authBtn" onclick="handleAuth()"></button>
     </div>
 
-    <h1 id="appTitle"></h1>
+    <!-- OTP verification -->
+    <div id="otpSection" class="hidden">
+      <h2 id="otpTitle"></h2>
+      <p class="subtitle" id="otpSubtitle"></p>
 
-    <div class="error-msg" id="errorMsg"></div>
+      <div class="otp-row" id="otpRow"></div>
+
+      <button class="btn-primary" id="verifyBtn" onclick="verifyOtp()"></button>
+
+      <div class="resend-row">
+        <span id="resendText"></span>
+        <button class="btn-link" id="resendBtn" onclick="resendOtp()"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TODO APP ── -->
+  <div id="todoWrap" class="todo-wrap">
+    <div class="topbar">
+      <h1 id="appTitle"></h1>
+      <div class="user-info">
+        <span id="userEmail"></span>
+        <button class="btn-logout" id="logoutBtn" onclick="logout()"></button>
+      </div>
+    </div>
+
+    <div id="todoMsg" class="msg"></div>
 
     <div class="input-row">
       <input type="text" id="todoInput" maxlength="200">
-      <button id="addBtn" title="">+</button>
+      <button id="addBtn" onclick="addTodo()">+</button>
     </div>
 
     <div class="filters">
-      <button data-filter="all" class="active" id="fAll"></button>
-      <button data-filter="active" id="fActive"></button>
-      <button data-filter="done" id="fDone"></button>
+      <button data-filter="all"    id="fAll"    class="active" onclick="setFilter(this)"></button>
+      <button data-filter="active" id="fActive" onclick="setFilter(this)"></button>
+      <button data-filter="done"   id="fDone"   onclick="setFilter(this)"></button>
     </div>
 
     <ul class="todo-list" id="todoList"><li class="loading" id="loadingMsg"></li></ul>
-
     <p class="summary" id="summary"></p>
-    <button class="clear-btn" id="clearDone"></button>
+    <button class="clear-btn" id="clearDone" onclick="clearCompleted()"></button>
   </div>
 
-  <script>
-    const i18n = {
-      tr: {
-        title:       'Yapılacaklar',
-        placeholder: 'Yeni görev ekle...',
-        all:         'Tümü',
-        active:      'Bekleyen',
-        done:        'Tamamlanan',
-        clear:       'Tamamlananları temizle',
-        loading:     'Yükleniyor...',
-        empty:       'Görev yok',
-        summary:     (d, t) => `${d} / ${t} tamamlandı`,
-        errLoad:     e => 'Veriler yüklenemedi: ' + e,
-        errAdd:      e => 'Görev eklenemedi: ' + e,
-        errUpdate:   e => 'Güncellenemedi: ' + e,
-        errDelete:   e => 'Silinemedi: ' + e,
-        errClear:    e => 'Temizlenemedi: ' + e,
-      },
-      en: {
-        title:       'To-Do List',
-        placeholder: 'Add a new task...',
-        all:         'All',
-        active:      'Pending',
-        done:        'Completed',
-        clear:       'Clear completed',
-        loading:     'Loading...',
-        empty:       'No tasks',
-        summary:     (d, t) => `${d} / ${t} completed`,
-        errLoad:     e => 'Failed to load: ' + e,
-        errAdd:      e => 'Failed to add: ' + e,
-        errUpdate:   e => 'Failed to update: ' + e,
-        errDelete:   e => 'Failed to delete: ' + e,
-        errClear:    e => 'Failed to clear: ' + e,
-      }
-    };
+</div>
 
-    const browserLang = (navigator.language || navigator.userLanguage || 'tr').toLowerCase();
-    let lang = browserLang.startsWith('en') ? 'en' : 'tr';
-
-    function setLang(l) {
-      lang = l;
-      document.documentElement.lang = l;
-      document.getElementById('btnTR').classList.toggle('active', l === 'tr');
-      document.getElementById('btnEN').classList.toggle('active', l === 'en');
-
-      const t = i18n[l];
-      document.title                              = t.title;
-      document.getElementById('appTitle').textContent  = t.title;
-      document.getElementById('todoInput').placeholder = t.placeholder;
-      document.getElementById('fAll').textContent      = t.all;
-      document.getElementById('fActive').textContent   = t.active;
-      document.getElementById('fDone').textContent     = t.done;
-      document.getElementById('clearDone').textContent = t.clear;
-      document.getElementById('loadingMsg').textContent = t.loading;
-      render();
+<script>
+  /* ════════════════ i18n ════════════════ */
+  const i18n = {
+    tr: {
+      tabSignin: 'Giriş Yap', tabSignup: 'Kayıt Ol',
+      lblEmail: 'E-posta', lblPassword: 'Şifre',
+      btnSignin: 'Giriş Yap', btnSignup: 'Kayıt Ol',
+      otpTitle: 'E-postanı Doğrula',
+      otpSubtitle: e => `${e} adresine 6 haneli kod gönderdik.`,
+      verifyBtn: 'Doğrula',
+      resendText: 'Kod gelmedi mi?', resendBtn: 'Tekrar gönder',
+      appTitle: 'Yapılacaklar',
+      logout: 'Çıkış',
+      placeholder: 'Yeni görev ekle...',
+      all: 'Tümü', active: 'Bekleyen', done: 'Tamamlanan',
+      clear: 'Tamamlananları temizle',
+      loading: 'Yükleniyor...', empty: 'Görev yok',
+      summary: (d, t) => `${d} / ${t} tamamlandı`,
+      errInvalid: 'E-posta veya şifre hatalı.',
+      errSignup: 'Kayıt başarısız: ',
+      errOtp: 'Kod hatalı veya süresi dolmuş.',
+      errResend: 'Kod gönderilemedi: ',
+      errLoad: 'Yüklenemedi: ', errAdd: 'Eklenemedi: ',
+      errUpdate: 'Güncellenemedi: ', errDelete: 'Silinemedi: ', errClear: 'Temizlenemedi: ',
+      infoSent: e => `${e} adresine doğrulama kodu gönderildi.`,
+      infoResent: 'Yeni kod gönderildi.',
+    },
+    en: {
+      tabSignin: 'Sign In', tabSignup: 'Sign Up',
+      lblEmail: 'Email', lblPassword: 'Password',
+      btnSignin: 'Sign In', btnSignup: 'Sign Up',
+      otpTitle: 'Verify Your Email',
+      otpSubtitle: e => `We sent a 6-digit code to ${e}.`,
+      verifyBtn: 'Verify',
+      resendText: "Didn't receive a code?", resendBtn: 'Resend',
+      appTitle: 'To-Do List',
+      logout: 'Sign Out',
+      placeholder: 'Add a new task...',
+      all: 'All', active: 'Pending', done: 'Completed',
+      clear: 'Clear completed',
+      loading: 'Loading...', empty: 'No tasks',
+      summary: (d, t) => `${d} / ${t} completed`,
+      errInvalid: 'Invalid email or password.',
+      errSignup: 'Sign up failed: ',
+      errOtp: 'Invalid or expired code.',
+      errResend: 'Failed to resend: ',
+      errLoad: 'Failed to load: ', errAdd: 'Failed to add: ',
+      errUpdate: 'Failed to update: ', errDelete: 'Failed to delete: ', errClear: 'Failed to clear: ',
+      infoSent: e => `Verification code sent to ${e}.`,
+      infoResent: 'New code sent.',
     }
+  };
 
-    const SUPABASE_URL  = 'https://jqqepcdiezcmeimwdqmh.supabase.co';
-    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcWVwY2RpZXpjbWVpbXdkcW1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NTQ5MzIsImV4cCI6MjA5NDIzMDkzMn0.lVYWwNxej6qh_KSG5M3jQMJgDZ65NgVUL6g4tnoNWK0';
-    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+  const browserLang = (navigator.language || 'tr').toLowerCase();
+  let lang = browserLang.startsWith('en') ? 'en' : 'tr';
 
-    let todos  = [];
-    let filter = 'all';
+  function t() { return i18n[lang]; }
 
-    const input    = document.getElementById('todoInput');
-    const addBtn   = document.getElementById('addBtn');
-    const list     = document.getElementById('todoList');
-    const summary  = document.getElementById('summary');
-    const clearBtn = document.getElementById('clearDone');
-    const errorMsg = document.getElementById('errorMsg');
+  function setLang(l) {
+    lang = l;
+    document.documentElement.lang = l;
+    document.getElementById('btnTR').classList.toggle('active', l === 'tr');
+    document.getElementById('btnEN').classList.toggle('active', l === 'en');
+    applyStrings();
+  }
 
-    function showError(msg) {
-      errorMsg.textContent = msg;
-      errorMsg.style.display = 'block';
-      setTimeout(() => { errorMsg.style.display = 'none'; }, 4000);
+  function applyStrings() {
+    const s = t();
+    document.title = s.appTitle;
+    document.getElementById('tabSignin').textContent   = s.tabSignin;
+    document.getElementById('tabSignup').textContent   = s.tabSignup;
+    document.getElementById('lblEmail').textContent    = s.lblEmail;
+    document.getElementById('lblPassword').textContent = s.lblPassword;
+    document.getElementById('authBtn').textContent     = currentTab === 'signin' ? s.btnSignin : s.btnSignup;
+    document.getElementById('otpTitle').textContent    = s.otpTitle;
+    document.getElementById('otpSubtitle').textContent = pendingEmail ? s.otpSubtitle(pendingEmail) : '';
+    document.getElementById('verifyBtn').textContent   = s.verifyBtn;
+    document.getElementById('resendText').textContent  = s.resendText;
+    document.getElementById('resendBtn').textContent   = s.resendBtn;
+    document.getElementById('appTitle').textContent    = s.appTitle;
+    document.getElementById('logoutBtn').textContent   = s.logout;
+    document.getElementById('todoInput').placeholder   = s.placeholder;
+    document.getElementById('fAll').textContent        = s.all;
+    document.getElementById('fActive').textContent     = s.active;
+    document.getElementById('fDone').textContent       = s.done;
+    document.getElementById('clearDone').textContent   = s.clear;
+    document.getElementById('loadingMsg').textContent  = s.loading;
+    renderTodos();
+  }
+
+  /* ════════════════ Supabase ════════════════ */
+  const SUPABASE_URL  = 'https://jqqepcdiezcmeimwdqmh.supabase.co';
+  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcWVwY2RpZXpjbWVpbXdkcW1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NTQ5MzIsImV4cCI6MjA5NDIzMDkzMn0.lVYWwNxej6qh_KSG5M3jQMJgDZ65NgVUL6g4tnoNWK0';
+  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+  /* ════════════════ Auth state ════════════════ */
+  let currentTab   = 'signin';
+  let pendingEmail = '';
+
+  function showMsg(type, text, target = 'msgBox') {
+    const el = document.getElementById(target);
+    el.className = `msg ${type}`;
+    el.textContent = text;
+    el.style.display = 'block';
+    if (type === 'info') setTimeout(() => { el.style.display = 'none'; }, 5000);
+  }
+
+  function hideMsg(id = 'msgBox') { document.getElementById(id).style.display = 'none'; }
+
+  function switchTab(tab) {
+    currentTab = tab;
+    document.getElementById('tabSignin').classList.toggle('active', tab === 'signin');
+    document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
+    document.getElementById('authBtn').textContent = tab === 'signin' ? t().btnSignin : t().btnSignup;
+    document.getElementById('passwordInput').autocomplete = tab === 'signin' ? 'current-password' : 'new-password';
+    hideMsg();
+  }
+
+  async function handleAuth() {
+    const email    = document.getElementById('emailInput').value.trim();
+    const password = document.getElementById('passwordInput').value;
+    if (!email || !password) return;
+
+    const btn = document.getElementById('authBtn');
+    btn.disabled = true;
+
+    if (currentTab === 'signin') {
+      const { error } = await db.auth.signInWithPassword({ email, password });
+      if (error) { showMsg('error', t().errInvalid); btn.disabled = false; return; }
+      // onAuthStateChange will handle UI
+    } else {
+      const { error } = await db.auth.signUp({ email, password });
+      if (error) { showMsg('error', t().errSignup + error.message); btn.disabled = false; return; }
+      pendingEmail = email;
+      showOtpSection();
     }
+    btn.disabled = false;
+  }
 
-    function render() {
-      const t = i18n[lang];
-      const visible = todos.filter(todo =>
-        filter === 'all'    ? true :
-        filter === 'active' ? !todo.done :
-                               todo.done
-      );
+  function showOtpSection() {
+    document.getElementById('formSection').classList.add('hidden');
+    document.getElementById('otpSection').classList.remove('hidden');
+    document.getElementById('otpSubtitle').textContent = t().otpSubtitle(pendingEmail);
+    buildOtpInputs();
+  }
 
-      list.innerHTML = '';
-
-      if (visible.length === 0) {
-        list.innerHTML = `<li class="empty">${t.empty}</li>`;
-      } else {
-        visible.forEach(todo => {
-          const li = document.createElement('li');
-          li.className = 'todo-item' + (todo.done ? ' done' : '');
-
-          const cb = document.createElement('input');
-          cb.type    = 'checkbox';
-          cb.checked = todo.done;
-          cb.addEventListener('change', () => toggleTodo(todo, cb.checked));
-
-          const span = document.createElement('span');
-          span.textContent = todo.text;
-
-          const del = document.createElement('button');
-          del.className   = 'delete-btn';
-          del.textContent = '✕';
-          del.addEventListener('click', () => deleteTodo(todo.id));
-
-          li.append(cb, span, del);
-          list.appendChild(li);
-        });
-      }
-
-      const total = todos.length;
-      const done  = todos.filter(todo => todo.done).length;
-      summary.textContent = total ? t.summary(done, total) : '';
+  function buildOtpInputs() {
+    const row = document.getElementById('otpRow');
+    row.innerHTML = '';
+    for (let i = 0; i < 6; i++) {
+      const inp = document.createElement('input');
+      inp.type        = 'text';
+      inp.inputMode   = 'numeric';
+      inp.maxLength   = 1;
+      inp.dataset.idx = i;
+      inp.addEventListener('input', onOtpInput);
+      inp.addEventListener('keydown', onOtpKeydown);
+      inp.addEventListener('paste', onOtpPaste);
+      row.appendChild(inp);
     }
+    row.children[0].focus();
+  }
 
-    async function loadTodos() {
-      const { data, error } = await db
-        .from('todos')
-        .select('*')
-        .order('created_at', { ascending: false });
+  function getOtpInputs() { return [...document.getElementById('otpRow').children]; }
 
-      if (error) { showError(i18n[lang].errLoad(error.message)); return; }
-      todos = data;
-      render();
-    }
+  function onOtpInput(e) {
+    const inp = e.target;
+    inp.value = inp.value.replace(/\D/g, '').slice(-1);
+    inp.classList.toggle('filled', inp.value !== '');
+    if (inp.value && inp.dataset.idx < 5)
+      getOtpInputs()[+inp.dataset.idx + 1].focus();
+  }
 
-    async function addTodo() {
-      const text = input.value.trim();
-      if (!text) return;
+  function onOtpKeydown(e) {
+    if (e.key === 'Backspace' && !e.target.value && e.target.dataset.idx > 0)
+      getOtpInputs()[+e.target.dataset.idx - 1].focus();
+    if (e.key === 'Enter') verifyOtp();
+  }
 
-      addBtn.disabled = true;
-      const { data, error } = await db
-        .from('todos')
-        .insert({ text, done: false })
-        .select()
-        .single();
-      addBtn.disabled = false;
+  function onOtpPaste(e) {
+    e.preventDefault();
+    const digits = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
+    const inputs = getOtpInputs();
+    digits.split('').forEach((d, i) => { if (inputs[i]) { inputs[i].value = d; inputs[i].classList.add('filled'); } });
+    if (digits.length < 6) inputs[digits.length]?.focus();
+    else inputs[5].focus();
+  }
 
-      if (error) { showError(i18n[lang].errAdd(error.message)); return; }
-      todos.unshift(data);
-      input.value = '';
-      render();
-    }
+  async function verifyOtp() {
+    const code = getOtpInputs().map(i => i.value).join('');
+    if (code.length < 6) return;
 
-    async function toggleTodo(todo, done) {
-      const { error } = await db.from('todos').update({ done }).eq('id', todo.id);
-      if (error) { showError(i18n[lang].errUpdate(error.message)); return; }
-      todo.done = done;
-      render();
-    }
-
-    async function deleteTodo(id) {
-      const { error } = await db.from('todos').delete().eq('id', id);
-      if (error) { showError(i18n[lang].errDelete(error.message)); return; }
-      todos = todos.filter(t => t.id !== id);
-      render();
-    }
-
-    async function clearCompleted() {
-      const ids = todos.filter(t => t.done).map(t => t.id);
-      if (!ids.length) return;
-      const { error } = await db.from('todos').delete().in('id', ids);
-      if (error) { showError(i18n[lang].errClear(error.message)); return; }
-      todos = todos.filter(t => !t.done);
-      render();
-    }
-
-    addBtn.addEventListener('click', addTodo);
-    input.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
-    clearBtn.addEventListener('click', clearCompleted);
-
-    document.querySelectorAll('.filters button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        filter = btn.dataset.filter;
-        document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        render();
-      });
+    document.getElementById('verifyBtn').disabled = true;
+    const { error } = await db.auth.verifyOtp({
+      email: pendingEmail,
+      token: code,
+      type: 'signup',
     });
+    document.getElementById('verifyBtn').disabled = false;
 
-    setLang(lang);
-    loadTodos();
-  </script>
+    if (error) { showMsg('error', t().errOtp); return; }
+    // session opened → onAuthStateChange fires
+  }
+
+  async function resendOtp() {
+    const { error } = await db.auth.resend({ type: 'signup', email: pendingEmail });
+    if (error) { showMsg('error', t().errResend + error.message); return; }
+    showMsg('info', t().infoResent);
+  }
+
+  async function logout() {
+    await db.auth.signOut();
+  }
+
+  /* ════════════════ Auth listener ════════════════ */
+  db.auth.onAuthStateChange((event, session) => {
+    if (session) {
+      document.getElementById('authWrap').style.display = 'none';
+      document.getElementById('todoWrap').style.display = 'block';
+      document.getElementById('userEmail').textContent  = session.user.email;
+      loadTodos();
+    } else {
+      document.getElementById('authWrap').style.display = 'block';
+      document.getElementById('todoWrap').style.display = 'none';
+      // Reset auth form
+      document.getElementById('formSection').classList.remove('hidden');
+      document.getElementById('otpSection').classList.add('hidden');
+      todos = [];
+    }
+  });
+
+  /* ════════════════ Todos ════════════════ */
+  let todos  = [];
+  let filter = 'all';
+
+  function setFilter(btn) {
+    filter = btn.dataset.filter;
+    document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderTodos();
+  }
+
+  function showTodoMsg(type, text) {
+    const el = document.getElementById('todoMsg');
+    el.className = `msg ${type}`;
+    el.textContent = text;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 4000);
+  }
+
+  function renderTodos() {
+    const s = t();
+    const list = document.getElementById('todoList');
+    const visible = todos.filter(todo =>
+      filter === 'all'    ? true :
+      filter === 'active' ? !todo.done : todo.done
+    );
+
+    list.innerHTML = '';
+    if (visible.length === 0) {
+      list.innerHTML = `<li class="empty">${s.empty}</li>`;
+    } else {
+      visible.forEach(todo => {
+        const li = document.createElement('li');
+        li.className = 'todo-item' + (todo.done ? ' done' : '');
+
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.checked = todo.done;
+        cb.addEventListener('change', () => toggleTodo(todo, cb.checked));
+
+        const span = document.createElement('span');
+        span.textContent = todo.text;
+
+        const del = document.createElement('button');
+        del.className = 'delete-btn'; del.textContent = '✕';
+        del.addEventListener('click', () => deleteTodo(todo.id));
+
+        li.append(cb, span, del);
+        list.appendChild(li);
+      });
+    }
+
+    const total = todos.length;
+    const done  = todos.filter(todo => todo.done).length;
+    document.getElementById('summary').textContent = total ? s.summary(done, total) : '';
+  }
+
+  async function loadTodos() {
+    const { data, error } = await db.from('todos').select('*').order('created_at', { ascending: false });
+    if (error) { showTodoMsg('error', t().errLoad + error.message); return; }
+    todos = data;
+    renderTodos();
+  }
+
+  async function addTodo() {
+    const input = document.getElementById('todoInput');
+    const text  = input.value.trim();
+    if (!text) return;
+
+    const session = (await db.auth.getSession()).data.session;
+    document.getElementById('addBtn').disabled = true;
+    const { data, error } = await db.from('todos')
+      .insert({ text, done: false, user_id: session.user.id })
+      .select().single();
+    document.getElementById('addBtn').disabled = false;
+
+    if (error) { showTodoMsg('error', t().errAdd + error.message); return; }
+    todos.unshift(data);
+    input.value = '';
+    renderTodos();
+  }
+
+  async function toggleTodo(todo, done) {
+    const { error } = await db.from('todos').update({ done }).eq('id', todo.id);
+    if (error) { showTodoMsg('error', t().errUpdate + error.message); return; }
+    todo.done = done;
+    renderTodos();
+  }
+
+  async function deleteTodo(id) {
+    const { error } = await db.from('todos').delete().eq('id', id);
+    if (error) { showTodoMsg('error', t().errDelete + error.message); return; }
+    todos = todos.filter(t => t.id !== id);
+    renderTodos();
+  }
+
+  async function clearCompleted() {
+    const ids = todos.filter(t => t.done).map(t => t.id);
+    if (!ids.length) return;
+    const { error } = await db.from('todos').delete().in('id', ids);
+    if (error) { showTodoMsg('error', t().errClear + error.message); return; }
+    todos = todos.filter(t => !t.done);
+    renderTodos();
+  }
+
+  document.getElementById('todoInput').addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
+
+  /* ════════════════ Init ════════════════ */
+  setLang(lang);
+</script>
 </body>
 </html>
