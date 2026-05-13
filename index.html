@@ -457,13 +457,18 @@ async function initSpaces() {
 
   // Fetch all spaces the user belongs to (own + joined)
   const { data: memberRows } = await db.from('space_members')
-    .select('space_id, role, spaces(id, name, owner_id)')
+    .select('space_id, role')
     .eq('user_id', session.user.id);
 
-  spaces = (memberRows||[]).map(r => ({
-    id: r.spaces.id, name: r.spaces.name,
-    role: r.role, isOwner: r.spaces.owner_id === session.user.id
-  }));
+  const spaceIds = (memberRows||[]).map(r => r.space_id);
+  const { data: spaceRows } = spaceIds.length
+    ? await db.from('spaces').select('id, name, owner_id').in('id', spaceIds)
+    : { data: [] };
+
+  spaces = (memberRows||[]).map(r => {
+    const s = (spaceRows||[]).find(x => x.id === r.space_id) || {};
+    return { id: r.space_id, name: s.name || r.space_id, role: r.role, isOwner: s.owner_id === session.user.id };
+  });
 
   // Default to own space
   const saved = localStorage.getItem('lastSpaceId');
