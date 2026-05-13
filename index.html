@@ -7,569 +7,687 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; min-height: 100vh; display: flex; justify-content: center; padding: 32px 16px; }
+    .container { width: 100%; max-width: 540px; }
 
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: #f0f2f5;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      padding: 40px 16px;
-    }
+    /* Lang */
+    .lang-bar { display: flex; justify-content: flex-end; margin-bottom: 14px; gap: 4px; }
+    .lang-bar button { padding: 4px 10px; border: 2px solid #e0e0e0; border-radius: 6px; background: #fff; cursor: pointer; font-size: 0.78rem; color: #888; transition: all .2s; }
+    .lang-bar button.active { border-color: #6c63ff; background: #6c63ff; color: #fff; }
 
-    .container { width: 100%; max-width: 500px; }
-
-    /* ── Lang toggle ── */
-    .lang-toggle { display: flex; justify-content: flex-end; margin-bottom: 16px; gap: 4px; }
-    .lang-toggle button {
-      padding: 4px 10px; border: 2px solid #e0e0e0; border-radius: 6px;
-      background: #fff; cursor: pointer; font-size: 0.8rem; color: #888; transition: all 0.2s;
-    }
-    .lang-toggle button.active { border-color: #6c63ff; background: #6c63ff; color: #fff; }
-
-    /* ── Auth card ── */
-    .auth-card {
-      background: #fff; border-radius: 16px; padding: 32px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.08); margin-bottom: 0;
-    }
-    .auth-card h2 { text-align: center; color: #1a1a2e; font-size: 1.5rem; margin-bottom: 8px; }
-    .auth-card p.subtitle { text-align: center; color: #888; font-size: 0.9rem; margin-bottom: 24px; }
-
-    .tabs { display: flex; margin-bottom: 24px; border-bottom: 2px solid #f0f2f5; }
-    .tabs button {
-      flex: 1; padding: 10px; border: none; background: none;
-      cursor: pointer; font-size: 0.95rem; color: #aaa;
-      border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s;
-    }
+    /* Auth card */
+    .auth-card { background: #fff; border-radius: 16px; padding: 32px; box-shadow: 0 4px 20px rgba(0,0,0,.08); }
+    .auth-card h2 { text-align: center; color: #1a1a2e; font-size: 1.4rem; margin-bottom: 6px; }
+    .tabs { display: flex; margin-bottom: 22px; border-bottom: 2px solid #f0f2f5; }
+    .tabs button { flex: 1; padding: 10px; border: none; background: none; cursor: pointer; font-size: .92rem; color: #aaa; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all .2s; }
     .tabs button.active { color: #6c63ff; border-bottom-color: #6c63ff; font-weight: 600; }
-
-    .form-group { margin-bottom: 16px; }
-    .form-group label { display: block; font-size: 0.82rem; color: #555; margin-bottom: 6px; font-weight: 500; }
-    .form-group input {
-      width: 100%; padding: 11px 14px; border: 2px solid #e0e0e0; border-radius: 10px;
-      font-size: 0.97rem; outline: none; transition: border-color 0.2s;
-    }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { display: block; font-size: .8rem; color: #555; margin-bottom: 5px; font-weight: 500; }
+    .form-group input { width: 100%; padding: 11px 14px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: .95rem; outline: none; transition: border-color .2s; }
     .form-group input:focus { border-color: #6c63ff; }
 
-    /* OTP inputs */
-    .otp-row { display: flex; gap: 10px; justify-content: center; margin: 8px 0 16px; }
-    .otp-row input {
-      width: 48px; height: 56px; text-align: center; font-size: 1.5rem; font-weight: 700;
-      border: 2px solid #e0e0e0; border-radius: 10px; outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .otp-row input:focus { border-color: #6c63ff; box-shadow: 0 0 0 3px rgba(108,99,255,0.15); }
+    /* OTP */
+    .otp-title { text-align: center; font-size: 1.2rem; font-weight: 700; color: #1a1a2e; margin-bottom: 6px; }
+    .otp-sub   { text-align: center; color: #888; font-size: .85rem; margin-bottom: 18px; }
+    .otp-row   { display: flex; gap: 8px; justify-content: center; margin-bottom: 18px; }
+    .otp-row input { width: 46px; height: 54px; text-align: center; font-size: 1.4rem; font-weight: 700; border: 2px solid #e0e0e0; border-radius: 10px; outline: none; transition: border-color .2s, box-shadow .2s; }
+    .otp-row input:focus { border-color: #6c63ff; box-shadow: 0 0 0 3px rgba(108,99,255,.15); }
     .otp-row input.filled { border-color: #6c63ff; background: #f5f4ff; }
+    .resend-row { text-align: center; color: #aaa; font-size: .83rem; margin-top: 14px; }
+    .btn-link { background: none; border: none; color: #6c63ff; cursor: pointer; font-size: .83rem; text-decoration: underline; padding: 0; }
 
-    .btn-primary {
-      width: 100%; padding: 13px; background: #6c63ff; color: #fff;
-      border: none; border-radius: 10px; font-size: 1rem; font-weight: 600;
-      cursor: pointer; transition: background 0.2s, transform 0.1s;
-      margin-top: 4px;
-    }
+    /* Buttons */
+    .btn-primary { width: 100%; padding: 12px; background: #6c63ff; color: #fff; border: none; border-radius: 10px; font-size: .97rem; font-weight: 600; cursor: pointer; transition: background .2s, transform .1s; margin-top: 4px; }
     .btn-primary:hover { background: #574fd6; }
-    .btn-primary:active { transform: scale(0.98); }
+    .btn-primary:active { transform: scale(.98); }
     .btn-primary:disabled { background: #c4c0f7; cursor: not-allowed; transform: none; }
+    .btn-icon { background: none; border: none; cursor: pointer; border-radius: 8px; padding: 6px 10px; font-size: .85rem; transition: background .2s; color: #666; }
+    .btn-icon:hover { background: #f0f2f5; }
 
-    .btn-link {
-      background: none; border: none; color: #6c63ff; cursor: pointer;
-      font-size: 0.85rem; text-decoration: underline; padding: 0;
-    }
+    /* Messages */
+    .msg { padding: 10px 14px; border-radius: 8px; font-size: .83rem; margin-bottom: 14px; display: none; }
+    .msg.error { background: #fee; border: 1px solid #fcc; color: #c33; display: block; }
+    .msg.info  { background: #eef; border: 1px solid #ccf; color: #339; display: block; }
+    .msg.warn  { background: #fff8e1; border: 1px solid #ffe082; color: #795; display: block; }
 
-    .resend-row { text-align: center; margin-top: 16px; color: #aaa; font-size: 0.85rem; }
+    /* Invite notification */
+    .invite-banner { background: #f5f4ff; border: 2px solid #6c63ff; border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; display: none; }
+    .invite-banner h4 { color: #6c63ff; margin-bottom: 8px; font-size: .9rem; }
+    .invite-item { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #ede; font-size: .85rem; }
+    .invite-item:last-child { border-bottom: none; }
+    .invite-item .inv-info { color: #444; }
+    .invite-item .inv-info small { color: #999; display: block; }
+    .invite-actions { display: flex; gap: 6px; }
+    .btn-accept { padding: 4px 12px; background: #6c63ff; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: .8rem; }
+    .btn-decline { padding: 4px 10px; background: none; border: 1px solid #ddd; border-radius: 6px; cursor: pointer; font-size: .8rem; color: #aaa; }
 
-    /* ── Error / info msg ── */
-    .msg {
-      padding: 10px 14px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 16px; display: none;
-    }
-    .msg.error { background: #fee; border: 1px solid #fcc; color: #c33; }
-    .msg.info  { background: #eef; border: 1px solid #ccf; color: #339; }
+    /* App topbar */
+    .topbar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; }
+    .topbar h1 { color: #1a1a2e; font-size: 1.7rem; letter-spacing: -.5px; flex: 1; }
+    .space-selector { font-size: .82rem; border: 1px solid #ddd; border-radius: 8px; padding: 5px 8px; color: #555; background: #fff; cursor: pointer; max-width: 140px; }
+    .user-chip { font-size: .75rem; color: #aaa; text-align: right; }
+    .user-chip span { display: block; font-weight: 600; color: #555; font-size: .8rem; }
 
-    /* ── Todo app ── */
-    .todo-wrap { display: none; }
+    /* Tab bar */
+    .tab-bar { display: flex; gap: 0; margin-bottom: 16px; background: #fff; border-radius: 10px; padding: 4px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+    .tab-bar button { flex: 1; padding: 8px; border: none; background: none; border-radius: 8px; cursor: pointer; font-size: .85rem; color: #888; transition: all .2s; }
+    .tab-bar button.active { background: #6c63ff; color: #fff; font-weight: 600; }
 
-    .topbar {
-      display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
-    }
-    .topbar h1 { color: #1a1a2e; font-size: 1.8rem; letter-spacing: -0.5px; }
-    .topbar .user-info { font-size: 0.8rem; color: #aaa; text-align: right; }
-    .topbar .user-info span { display: block; font-weight: 600; color: #555; }
-
-    .btn-logout {
-      background: none; border: 1px solid #e0e0e0; border-radius: 8px;
-      color: #aaa; cursor: pointer; font-size: 0.8rem; padding: 5px 12px;
-      margin-top: 6px; transition: all 0.2s;
-    }
-    .btn-logout:hover { border-color: #e74c3c; color: #e74c3c; }
-
-    .input-row { display: flex; gap: 8px; margin-bottom: 16px; }
-    .input-row input {
-      flex: 1; padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 10px;
-      font-size: 1rem; outline: none; transition: border-color 0.2s; background: #fff;
-    }
+    /* Todos */
+    .input-row { display: flex; gap: 8px; margin-bottom: 14px; }
+    .input-row input { flex: 1; padding: 11px 14px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: .97rem; outline: none; transition: border-color .2s; background: #fff; }
     .input-row input:focus { border-color: #6c63ff; }
-    .input-row button {
-      padding: 12px 20px; background: #6c63ff; color: #fff; border: none;
-      border-radius: 10px; font-size: 1.4rem; cursor: pointer; transition: background 0.2s, transform 0.1s;
-    }
+    .input-row button { padding: 11px 18px; background: #6c63ff; color: #fff; border: none; border-radius: 10px; font-size: 1.3rem; cursor: pointer; transition: background .2s; }
     .input-row button:hover { background: #574fd6; }
-    .input-row button:active { transform: scale(0.95); }
-
-    .filters { display: flex; gap: 8px; margin-bottom: 16px; }
-    .filters button {
-      flex: 1; padding: 8px; border: 2px solid #e0e0e0; border-radius: 8px;
-      background: #fff; cursor: pointer; font-size: 0.85rem; color: #555; transition: all 0.2s;
-    }
+    .filters { display: flex; gap: 6px; margin-bottom: 14px; }
+    .filters button { flex: 1; padding: 7px; border: 2px solid #e0e0e0; border-radius: 8px; background: #fff; cursor: pointer; font-size: .82rem; color: #555; transition: all .2s; }
     .filters button.active { border-color: #6c63ff; background: #6c63ff; color: #fff; }
+    .todo-list { list-style: none; display: flex; flex-direction: column; gap: 7px; }
+    .todo-item { display: flex; align-items: center; gap: 10px; background: #fff; padding: 12px 14px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.05); animation: fadeIn .2s ease; }
+    @keyframes fadeIn { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:translateY(0); } }
+    .todo-item input[type=checkbox] { width: 17px; height: 17px; accent-color: #6c63ff; cursor: pointer; flex-shrink: 0; }
+    .todo-item .todo-body { flex: 1; min-width: 0; }
+    .todo-item .todo-text { font-size: .93rem; color: #222; word-break: break-word; }
+    .todo-item .todo-meta { font-size: .72rem; color: #bbb; margin-top: 2px; }
+    .todo-item.done .todo-text { text-decoration: line-through; color: #bbb; }
+    .todo-item .del-btn { background: none; border: none; cursor: pointer; color: #ddd; font-size: 1rem; padding: 3px 6px; border-radius: 6px; transition: color .2s; flex-shrink: 0; }
+    .todo-item .del-btn:hover { color: #e74c3c; }
+    .todo-item .del-btn.hidden { display: none; }
+    .empty   { text-align: center; color: #ccc; font-size: .92rem; padding: 28px 0; }
+    .loading { text-align: center; color: #bbb; padding: 28px 0; font-size: .88rem; }
+    .summary { text-align: center; color: #aaa; font-size: .8rem; margin-top: 14px; }
+    .clear-btn { display: block; margin: 10px auto 0; padding: 5px 14px; background: none; border: 1px solid #e0e0e0; border-radius: 7px; color: #bbb; cursor: pointer; font-size: .8rem; transition: all .2s; }
+    .clear-btn:hover { border-color: #e74c3c; color: #e74c3c; }
 
-    .todo-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
-    .todo-item {
-      display: flex; align-items: center; gap: 12px; background: #fff;
-      padding: 14px 16px; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-      animation: fadeIn 0.2s ease;
-    }
-    @keyframes fadeIn { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:translateY(0); } }
+    /* Activity log */
+    .log-list { display: flex; flex-direction: column; gap: 6px; }
+    .log-item { background: #fff; border-radius: 10px; padding: 11px 14px; box-shadow: 0 1px 4px rgba(0,0,0,.05); display: flex; gap: 10px; align-items: flex-start; }
+    .log-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 1px; }
+    .log-body { flex: 1; }
+    .log-body .log-text { font-size: .88rem; color: #333; }
+    .log-body .log-email { font-weight: 600; color: #6c63ff; }
+    .log-body .log-time  { font-size: .73rem; color: #ccc; margin-top: 2px; }
 
-    .todo-item input[type="checkbox"] { width:18px; height:18px; accent-color:#6c63ff; cursor:pointer; flex-shrink:0; }
-    .todo-item span { flex:1; font-size:0.97rem; color:#222; word-break:break-word; }
-    .todo-item.done span { text-decoration:line-through; color:#aaa; }
-    .todo-item .delete-btn {
-      background:none; border:none; cursor:pointer; color:#ccc; font-size:1.1rem;
-      padding:4px; border-radius:6px; transition:color 0.2s; flex-shrink:0;
-    }
-    .todo-item .delete-btn:hover { color:#e74c3c; }
-
-    .empty   { text-align:center; color:#bbb; font-size:0.95rem; padding:32px 0; }
-    .loading { text-align:center; color:#aaa; padding:32px 0; font-size:0.9rem; }
-    .summary { text-align:center; color:#999; font-size:0.82rem; margin-top:16px; }
-
-    .clear-btn {
-      display:block; margin:12px auto 0; padding:6px 16px; background:none;
-      border:1px solid #e0e0e0; border-radius:8px; color:#aaa; cursor:pointer;
-      font-size:0.82rem; transition:all 0.2s;
-    }
-    .clear-btn:hover { border-color:#e74c3c; color:#e74c3c; }
+    /* Share modal */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 100; display: none; }
+    .modal-overlay.open { display: flex; }
+    .modal { background: #fff; border-radius: 16px; padding: 28px; width: 100%; max-width: 420px; max-height: 85vh; overflow-y: auto; box-shadow: 0 8px 40px rgba(0,0,0,.18); }
+    .modal h3 { font-size: 1.1rem; color: #1a1a2e; margin-bottom: 18px; }
+    .modal-close { float: right; background: none; border: none; font-size: 1.3rem; cursor: pointer; color: #aaa; margin-top: -4px; }
+    .member-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: .85rem; }
+    .member-item:last-child { border-bottom: none; }
+    .role-badge { font-size: .7rem; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
+    .role-badge.owner  { background: #ede9ff; color: #6c63ff; }
+    .role-badge.member { background: #f0f2f5; color: #888; }
+    .pending-badge { font-size: .7rem; padding: 2px 7px; border-radius: 20px; background: #fff8e1; color: #f59e0b; font-weight: 600; }
+    .invite-form { display: flex; gap: 8px; margin-top: 16px; }
+    .invite-form input { flex: 1; padding: 9px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: .87rem; outline: none; transition: border-color .2s; }
+    .invite-form input:focus { border-color: #6c63ff; }
+    .invite-form button { padding: 9px 16px; background: #6c63ff; color: #fff; border: none; border-radius: 8px; font-size: .87rem; cursor: pointer; white-space: nowrap; }
+    .invite-form button:hover { background: #574fd6; }
+    .section-label { font-size: .75rem; font-weight: 700; color: #aaa; text-transform: uppercase; letter-spacing: .5px; margin: 16px 0 8px; }
 
     .hidden { display: none !important; }
   </style>
 </head>
 <body>
 <div class="container">
-
-  <!-- Lang toggle -->
-  <div class="lang-toggle">
+  <div class="lang-bar">
     <button id="btnTR" onclick="setLang('tr')">TR</button>
     <button id="btnEN" onclick="setLang('en')">EN</button>
   </div>
 
   <!-- ── AUTH ── -->
   <div id="authWrap" class="auth-card">
-    <div id="msgBox" class="msg"></div>
-
-    <!-- Sign in / Sign up tabs -->
+    <div id="authMsg" class="msg"></div>
     <div id="formSection">
       <div class="tabs">
         <button id="tabSignin" onclick="switchTab('signin')" class="active"></button>
         <button id="tabSignup" onclick="switchTab('signup')"></button>
       </div>
-
-      <div class="form-group">
-        <label id="lblEmail"></label>
-        <input type="email" id="emailInput" autocomplete="email">
-      </div>
-      <div class="form-group">
-        <label id="lblPassword"></label>
-        <input type="password" id="passwordInput" autocomplete="current-password">
-      </div>
-
+      <div class="form-group"><label id="lblEmail"></label><input type="email" id="emailInput" autocomplete="email"></div>
+      <div class="form-group"><label id="lblPassword"></label><input type="password" id="passwordInput"></div>
       <button class="btn-primary" id="authBtn" onclick="handleAuth()"></button>
     </div>
-
-    <!-- OTP verification -->
     <div id="otpSection" class="hidden">
-      <h2 id="otpTitle"></h2>
-      <p class="subtitle" id="otpSubtitle"></p>
-
-      <div class="otp-row" id="otpRow"></div>
-
+      <div class="otp-title" id="otpTitle"></div>
+      <div class="otp-sub"   id="otpSub"></div>
+      <div class="otp-row"   id="otpRow"></div>
       <button class="btn-primary" id="verifyBtn" onclick="verifyOtp()"></button>
-
-      <div class="resend-row">
-        <span id="resendText"></span>
-        <button class="btn-link" id="resendBtn" onclick="resendOtp()"></button>
-      </div>
+      <div class="resend-row"><span id="resendLabel"></span> <button class="btn-link" id="resendBtn" onclick="resendOtp()"></button></div>
     </div>
   </div>
 
-  <!-- ── TODO APP ── -->
-  <div id="todoWrap" class="todo-wrap">
+  <!-- ── APP ── -->
+  <div id="appWrap" class="hidden">
+
+    <!-- Invite banner -->
+    <div class="invite-banner" id="inviteBanner">
+      <h4 id="inviteBannerTitle"></h4>
+      <div id="inviteList"></div>
+    </div>
+
+    <!-- Topbar -->
     <div class="topbar">
       <h1 id="appTitle"></h1>
-      <div class="user-info">
-        <span id="userEmail"></span>
-        <button class="btn-logout" id="logoutBtn" onclick="logout()"></button>
+      <select class="space-selector" id="spaceSelector" onchange="switchSpace(this.value)" style="display:none"></select>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <div class="user-chip"><span id="userEmail"></span></div>
+        <div style="display:flex;gap:4px">
+          <button class="btn-icon" id="shareBtn" onclick="openShareModal()" title="Share">👥</button>
+          <button class="btn-icon" onclick="logout()">🚪</button>
+        </div>
       </div>
     </div>
 
-    <div id="todoMsg" class="msg"></div>
+    <div id="appMsg" class="msg"></div>
 
-    <div class="input-row">
-      <input type="text" id="todoInput" maxlength="200">
-      <button id="addBtn" onclick="addTodo()">+</button>
+    <!-- Tab bar -->
+    <div class="tab-bar">
+      <button id="tabTodos"    onclick="switchAppTab('todos')"    class="active" ></button>
+      <button id="tabActivity" onclick="switchAppTab('activity')"></button>
     </div>
 
-    <div class="filters">
-      <button data-filter="all"    id="fAll"    class="active" onclick="setFilter(this)"></button>
-      <button data-filter="active" id="fActive" onclick="setFilter(this)"></button>
-      <button data-filter="done"   id="fDone"   onclick="setFilter(this)"></button>
+    <!-- Todos tab -->
+    <div id="todoTab">
+      <div class="input-row">
+        <input type="text" id="todoInput" maxlength="200">
+        <button id="addBtn" onclick="addTodo()">+</button>
+      </div>
+      <div class="filters">
+        <button data-filter="all"    id="fAll"    class="active" onclick="setFilter(this)"></button>
+        <button data-filter="active" id="fActive" onclick="setFilter(this)"></button>
+        <button data-filter="done"   id="fDone"   onclick="setFilter(this)"></button>
+      </div>
+      <ul class="todo-list" id="todoList"><li class="loading" id="loadingMsg"></li></ul>
+      <p class="summary" id="summary"></p>
+      <button class="clear-btn" id="clearDone" onclick="clearCompleted()"></button>
     </div>
 
-    <ul class="todo-list" id="todoList"><li class="loading" id="loadingMsg"></li></ul>
-    <p class="summary" id="summary"></p>
-    <button class="clear-btn" id="clearDone" onclick="clearCompleted()"></button>
+    <!-- Activity tab -->
+    <div id="activityTab" class="hidden">
+      <div class="log-list" id="logList"><div class="loading" id="logLoading"></div></div>
+    </div>
   </div>
+</div>
 
+<!-- Share modal -->
+<div class="modal-overlay" id="shareModal" onclick="closeShareModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeShareModal()">✕</button>
+    <h3 id="shareTitle"></h3>
+    <div id="shareMsg" class="msg"></div>
+    <div class="section-label" id="membersLabel"></div>
+    <div id="membersList"></div>
+    <div class="section-label" id="inviteLabel"></div>
+    <div class="invite-form">
+      <input type="email" id="inviteEmail" placeholder="email@example.com">
+      <button onclick="sendInvite()" id="inviteBtn"></button>
+    </div>
+  </div>
 </div>
 
 <script>
-  /* ════════════════ i18n ════════════════ */
-  const i18n = {
-    tr: {
-      tabSignin: 'Giriş Yap', tabSignup: 'Kayıt Ol',
-      lblEmail: 'E-posta', lblPassword: 'Şifre',
-      btnSignin: 'Giriş Yap', btnSignup: 'Kayıt Ol',
-      otpTitle: 'E-postanı Doğrula',
-      otpSubtitle: e => `${e} adresine 6 haneli kod gönderdik.`,
-      verifyBtn: 'Doğrula',
-      resendText: 'Kod gelmedi mi?', resendBtn: 'Tekrar gönder',
-      appTitle: 'Yapılacaklar',
-      logout: 'Çıkış',
-      placeholder: 'Yeni görev ekle...',
-      all: 'Tümü', active: 'Bekleyen', done: 'Tamamlanan',
-      clear: 'Tamamlananları temizle',
-      loading: 'Yükleniyor...', empty: 'Görev yok',
-      summary: (d, t) => `${d} / ${t} tamamlandı`,
-      errInvalid: 'E-posta veya şifre hatalı.',
-      errSignup: 'Kayıt başarısız: ',
-      errOtp: 'Kod hatalı veya süresi dolmuş.',
-      errResend: 'Kod gönderilemedi: ',
-      errLoad: 'Yüklenemedi: ', errAdd: 'Eklenemedi: ',
-      errUpdate: 'Güncellenemedi: ', errDelete: 'Silinemedi: ', errClear: 'Temizlenemedi: ',
-      infoSent: e => `${e} adresine doğrulama kodu gönderildi.`,
-      infoResent: 'Yeni kod gönderildi.',
+/* ═══════════════ i18n ═══════════════ */
+const i18n = {
+  tr: {
+    tabSignin:'Giriş Yap', tabSignup:'Kayıt Ol', lblEmail:'E-posta', lblPassword:'Şifre',
+    btnSignin:'Giriş Yap', btnSignup:'Kayıt Ol',
+    otpTitle:'E-postanı Doğrula', otpSub: e=>`${e} adresine 6 haneli kod gönderdik.`,
+    verifyBtn:'Doğrula', resendLabel:'Kod gelmedi mi?', resendBtn:'Tekrar gönder',
+    appTitle:'Yapılacaklar', tabTodos:'Görevler', tabActivity:'Aktivite',
+    placeholder:'Yeni görev ekle...', all:'Tümü', active:'Bekleyen', done:'Tamamlanan',
+    clear:'Tamamlananları temizle', loading:'Yükleniyor...', empty:'Görev yok',
+    summary:(d,t)=>`${d} / ${t} tamamlandı`,
+    shareTitle:'Listeyi Paylaş', membersLabel:'Üyeler', inviteLabel:'E-posta ile davet et',
+    inviteBtn:'Davet Et', owner:'Sahip', member:'Üye', pending:'Bekliyor',
+    inviteBannerTitle:'Davet Aldınız',
+    inviteAccept:'Katıl', inviteDecline:'Reddet',
+    logEmpty:'Henüz aktivite yok.',  logLoading:'Yükleniyor...',
+    actions:{
+      todo_added:      (e,m)=>`<span class="log-email">${e}</span> "${m.text}" görevini ekledi`,
+      todo_completed:  (e,m)=>`<span class="log-email">${e}</span> "${m.text}" görevini tamamladı`,
+      todo_uncompleted:(e,m)=>`<span class="log-email">${e}</span> "${m.text}" görevini geri aldı`,
+      member_invited:  (e,m)=>`<span class="log-email">${e}</span>, <b>${m.email}</b> adresini davet etti`,
+      member_joined:   (e,m)=>`<span class="log-email">${e}</span> listeye katıldı`,
     },
-    en: {
-      tabSignin: 'Sign In', tabSignup: 'Sign Up',
-      lblEmail: 'Email', lblPassword: 'Password',
-      btnSignin: 'Sign In', btnSignup: 'Sign Up',
-      otpTitle: 'Verify Your Email',
-      otpSubtitle: e => `We sent a 6-digit code to ${e}.`,
-      verifyBtn: 'Verify',
-      resendText: "Didn't receive a code?", resendBtn: 'Resend',
-      appTitle: 'To-Do List',
-      logout: 'Sign Out',
-      placeholder: 'Add a new task...',
-      all: 'All', active: 'Pending', done: 'Completed',
-      clear: 'Clear completed',
-      loading: 'Loading...', empty: 'No tasks',
-      summary: (d, t) => `${d} / ${t} completed`,
-      errInvalid: 'Invalid email or password.',
-      errSignup: 'Sign up failed: ',
-      errOtp: 'Invalid or expired code.',
-      errResend: 'Failed to resend: ',
-      errLoad: 'Failed to load: ', errAdd: 'Failed to add: ',
-      errUpdate: 'Failed to update: ', errDelete: 'Failed to delete: ', errClear: 'Failed to clear: ',
-      infoSent: e => `Verification code sent to ${e}.`,
-      infoResent: 'New code sent.',
-    }
-  };
-
-  const browserLang = (navigator.language || 'tr').toLowerCase();
-  let lang = browserLang.startsWith('en') ? 'en' : 'tr';
-
-  function t() { return i18n[lang]; }
-
-  function setLang(l) {
-    lang = l;
-    document.documentElement.lang = l;
-    document.getElementById('btnTR').classList.toggle('active', l === 'tr');
-    document.getElementById('btnEN').classList.toggle('active', l === 'en');
-    applyStrings();
+    actionIcons:{ todo_added:'📝', todo_completed:'✅', todo_uncompleted:'↩️', member_invited:'📨', member_joined:'👋' },
+    errAuth:'E-posta veya şifre hatalı.', errSignup:'Kayıt hatası: ', errOtp:'Kod hatalı veya süresi dolmuş.',
+    errInvite:'Davet gönderilemedi: ', errAlreadyMember:'Bu e-posta zaten üye.',
+    errLoad:'Yüklenemedi: ', errAdd:'Eklenemedi: ', errUpdate:'Güncellenemedi: ',
+    errDelete:'Silinemedi: ', errClear:'Temizlenemedi: ',
+    infoInviteSent: e=>`${e} adresine davet gönderildi.`,
+    infoJoined: n=>`"${n}" listesine katıldınız.`,
+  },
+  en: {
+    tabSignin:'Sign In', tabSignup:'Sign Up', lblEmail:'Email', lblPassword:'Password',
+    btnSignin:'Sign In', btnSignup:'Sign Up',
+    otpTitle:'Verify Your Email', otpSub: e=>`We sent a 6-digit code to ${e}.`,
+    verifyBtn:'Verify', resendLabel:"Didn't get a code?", resendBtn:'Resend',
+    appTitle:'To-Do List', tabTodos:'Tasks', tabActivity:'Activity',
+    placeholder:'Add a new task...', all:'All', active:'Pending', done:'Completed',
+    clear:'Clear completed', loading:'Loading...', empty:'No tasks',
+    summary:(d,t)=>`${d} / ${t} completed`,
+    shareTitle:'Share List', membersLabel:'Members', inviteLabel:'Invite by email',
+    inviteBtn:'Invite', owner:'Owner', member:'Member', pending:'Pending',
+    inviteBannerTitle:'You have invitations',
+    inviteAccept:'Join', inviteDecline:'Decline',
+    logEmpty:'No activity yet.', logLoading:'Loading...',
+    actions:{
+      todo_added:      (e,m)=>`<span class="log-email">${e}</span> added "${m.text}"`,
+      todo_completed:  (e,m)=>`<span class="log-email">${e}</span> completed "${m.text}"`,
+      todo_uncompleted:(e,m)=>`<span class="log-email">${e}</span> unchecked "${m.text}"`,
+      member_invited:  (e,m)=>`<span class="log-email">${e}</span> invited <b>${m.email}</b>`,
+      member_joined:   (e,m)=>`<span class="log-email">${e}</span> joined the list`,
+    },
+    actionIcons:{ todo_added:'📝', todo_completed:'✅', todo_uncompleted:'↩️', member_invited:'📨', member_joined:'👋' },
+    errAuth:'Invalid email or password.', errSignup:'Sign up error: ', errOtp:'Invalid or expired code.',
+    errInvite:'Failed to invite: ', errAlreadyMember:'This email is already a member.',
+    errLoad:'Load failed: ', errAdd:'Add failed: ', errUpdate:'Update failed: ',
+    errDelete:'Delete failed: ', errClear:'Clear failed: ',
+    infoInviteSent: e=>`Invitation sent to ${e}.`,
+    infoJoined: n=>`You joined "${n}".`,
   }
+};
+const browserLang = (navigator.language||'tr').toLowerCase();
+let lang = browserLang.startsWith('en') ? 'en' : 'tr';
+const t = () => i18n[lang];
 
-  function applyStrings() {
-    const s = t();
-    document.title = s.appTitle;
-    document.getElementById('tabSignin').textContent   = s.tabSignin;
-    document.getElementById('tabSignup').textContent   = s.tabSignup;
-    document.getElementById('lblEmail').textContent    = s.lblEmail;
-    document.getElementById('lblPassword').textContent = s.lblPassword;
-    document.getElementById('authBtn').textContent     = currentTab === 'signin' ? s.btnSignin : s.btnSignup;
-    document.getElementById('otpTitle').textContent    = s.otpTitle;
-    document.getElementById('otpSubtitle').textContent = pendingEmail ? s.otpSubtitle(pendingEmail) : '';
-    document.getElementById('verifyBtn').textContent   = s.verifyBtn;
-    document.getElementById('resendText').textContent  = s.resendText;
-    document.getElementById('resendBtn').textContent   = s.resendBtn;
-    document.getElementById('appTitle').textContent    = s.appTitle;
-    document.getElementById('logoutBtn').textContent   = s.logout;
-    document.getElementById('todoInput').placeholder   = s.placeholder;
-    document.getElementById('fAll').textContent        = s.all;
-    document.getElementById('fActive').textContent     = s.active;
-    document.getElementById('fDone').textContent       = s.done;
-    document.getElementById('clearDone').textContent   = s.clear;
-    document.getElementById('loadingMsg').textContent  = s.loading;
-    renderTodos();
+function setLang(l) {
+  lang = l;
+  document.documentElement.lang = l;
+  document.getElementById('btnTR').classList.toggle('active', l==='tr');
+  document.getElementById('btnEN').classList.toggle('active', l==='en');
+  applyStrings();
+}
+function applyStrings() {
+  const s = t();
+  document.title = s.appTitle;
+  el('tabSignin').textContent = s.tabSignin;
+  el('tabSignup').textContent = s.tabSignup;
+  el('lblEmail').textContent   = s.lblEmail;
+  el('lblPassword').textContent= s.lblPassword;
+  el('authBtn').textContent    = currentTab==='signin' ? s.btnSignin : s.btnSignup;
+  el('otpTitle').textContent   = s.otpTitle;
+  el('otpSub').textContent     = pendingEmail ? s.otpSub(pendingEmail) : '';
+  el('verifyBtn').textContent  = s.verifyBtn;
+  el('resendLabel').textContent= s.resendLabel;
+  el('resendBtn').textContent  = s.resendBtn;
+  el('appTitle').textContent   = s.appTitle;
+  el('tabTodos').textContent   = s.tabTodos;
+  el('tabActivity').textContent= s.tabActivity;
+  el('todoInput').placeholder  = s.placeholder;
+  el('fAll').textContent       = s.all;
+  el('fActive').textContent    = s.active;
+  el('fDone').textContent      = s.done;
+  el('clearDone').textContent  = s.clear;
+  el('loadingMsg').textContent = s.loading;
+  el('logLoading').textContent = s.logLoading;
+  el('shareTitle').textContent = s.shareTitle;
+  el('membersLabel').textContent= s.membersLabel;
+  el('inviteLabel').textContent = s.inviteLabel;
+  el('inviteBtn').textContent  = s.inviteBtn;
+  el('inviteBannerTitle').textContent = s.inviteBannerTitle;
+  renderTodos();
+}
+
+/* ═══════════════ Supabase ═══════════════ */
+const SB_URL  = 'https://jqqepcdiezcmeimwdqmh.supabase.co';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcWVwY2RpZXpjbWVpbXdkcW1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NTQ5MzIsImV4cCI6MjA5NDIzMDkzMn0.lVYWwNxej6qh_KSG5M3jQMJgDZ65NgVUL6g4tnoNWK0';
+const db = supabase.createClient(SB_URL, SB_ANON);
+
+/* ═══════════════ Helpers ═══════════════ */
+const el = id => document.getElementById(id);
+function showMsg(boxId, type, text) {
+  const e = el(boxId);
+  e.className = `msg ${type}`; e.textContent = text;
+  if (type === 'info') setTimeout(()=>{ e.className='msg'; e.textContent=''; }, 4000);
+}
+function relTime(iso) {
+  const diff = Date.now() - new Date(iso);
+  const m = Math.floor(diff/60000), h = Math.floor(m/60), d = Math.floor(h/24);
+  if (lang==='tr') {
+    if (d)  return `${d} gün önce`;
+    if (h)  return `${h} saat önce`;
+    if (m)  return `${m} dk önce`;
+    return 'az önce';
+  } else {
+    if (d)  return `${d}d ago`;
+    if (h)  return `${h}h ago`;
+    if (m)  return `${m}m ago`;
+    return 'just now';
   }
+}
 
-  /* ════════════════ Supabase ════════════════ */
-  const SUPABASE_URL  = 'https://jqqepcdiezcmeimwdqmh.supabase.co';
-  const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcWVwY2RpZXpjbWVpbXdkcW1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NTQ5MzIsImV4cCI6MjA5NDIzMDkzMn0.lVYWwNxej6qh_KSG5M3jQMJgDZ65NgVUL6g4tnoNWK0';
-  const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+/* ═══════════════ Auth ═══════════════ */
+let currentTab = 'signin', pendingEmail = '';
 
-  /* ════════════════ Auth state ════════════════ */
-  let currentTab   = 'signin';
-  let pendingEmail = '';
-
-  function showMsg(type, text, target = 'msgBox') {
-    const el = document.getElementById(target);
-    el.className = `msg ${type}`;
-    el.textContent = text;
-    el.style.display = 'block';
-    if (type === 'info') setTimeout(() => { el.style.display = 'none'; }, 5000);
+function switchTab(tab) {
+  currentTab = tab;
+  el('tabSignin').classList.toggle('active', tab==='signin');
+  el('tabSignup').classList.toggle('active', tab==='signup');
+  el('authBtn').textContent = tab==='signin' ? t().btnSignin : t().btnSignup;
+  el('passwordInput').autocomplete = tab==='signin' ? 'current-password' : 'new-password';
+  el('authMsg').className = 'msg';
+}
+async function handleAuth() {
+  const email = el('emailInput').value.trim(), pass = el('passwordInput').value;
+  if (!email || !pass) return;
+  el('authBtn').disabled = true;
+  if (currentTab === 'signin') {
+    const { error } = await db.auth.signInWithPassword({ email, password: pass });
+    if (error) { showMsg('authMsg','error', t().errAuth); }
+  } else {
+    const { error } = await db.auth.signUp({ email, password: pass });
+    if (error) { showMsg('authMsg','error', t().errSignup + error.message); }
+    else { pendingEmail = email; showOtpSection(); }
   }
-
-  function hideMsg(id = 'msgBox') { document.getElementById(id).style.display = 'none'; }
-
-  function switchTab(tab) {
-    currentTab = tab;
-    document.getElementById('tabSignin').classList.toggle('active', tab === 'signin');
-    document.getElementById('tabSignup').classList.toggle('active', tab === 'signup');
-    document.getElementById('authBtn').textContent = tab === 'signin' ? t().btnSignin : t().btnSignup;
-    document.getElementById('passwordInput').autocomplete = tab === 'signin' ? 'current-password' : 'new-password';
-    hideMsg();
-  }
-
-  async function handleAuth() {
-    const email    = document.getElementById('emailInput').value.trim();
-    const password = document.getElementById('passwordInput').value;
-    if (!email || !password) return;
-
-    const btn = document.getElementById('authBtn');
-    btn.disabled = true;
-
-    if (currentTab === 'signin') {
-      const { error } = await db.auth.signInWithPassword({ email, password });
-      if (error) { showMsg('error', t().errInvalid); btn.disabled = false; return; }
-      // onAuthStateChange will handle UI
-    } else {
-      const { error } = await db.auth.signUp({ email, password });
-      if (error) { showMsg('error', t().errSignup + error.message); btn.disabled = false; return; }
-      pendingEmail = email;
-      showOtpSection();
-    }
-    btn.disabled = false;
-  }
-
-  function showOtpSection() {
-    document.getElementById('formSection').classList.add('hidden');
-    document.getElementById('otpSection').classList.remove('hidden');
-    document.getElementById('otpSubtitle').textContent = t().otpSubtitle(pendingEmail);
-    buildOtpInputs();
-  }
-
-  function buildOtpInputs() {
-    const row = document.getElementById('otpRow');
-    row.innerHTML = '';
-    for (let i = 0; i < 6; i++) {
-      const inp = document.createElement('input');
-      inp.type        = 'text';
-      inp.inputMode   = 'numeric';
-      inp.maxLength   = 1;
-      inp.dataset.idx = i;
-      inp.addEventListener('input', onOtpInput);
-      inp.addEventListener('keydown', onOtpKeydown);
-      inp.addEventListener('paste', onOtpPaste);
-      row.appendChild(inp);
-    }
-    row.children[0].focus();
-  }
-
-  function getOtpInputs() { return [...document.getElementById('otpRow').children]; }
-
-  function onOtpInput(e) {
-    const inp = e.target;
-    inp.value = inp.value.replace(/\D/g, '').slice(-1);
-    inp.classList.toggle('filled', inp.value !== '');
-    if (inp.value && inp.dataset.idx < 5)
-      getOtpInputs()[+inp.dataset.idx + 1].focus();
-  }
-
-  function onOtpKeydown(e) {
-    if (e.key === 'Backspace' && !e.target.value && e.target.dataset.idx > 0)
-      getOtpInputs()[+e.target.dataset.idx - 1].focus();
-    if (e.key === 'Enter') verifyOtp();
-  }
-
-  function onOtpPaste(e) {
-    e.preventDefault();
-    const digits = (e.clipboardData.getData('text') || '').replace(/\D/g, '').slice(0, 6);
-    const inputs = getOtpInputs();
-    digits.split('').forEach((d, i) => { if (inputs[i]) { inputs[i].value = d; inputs[i].classList.add('filled'); } });
-    if (digits.length < 6) inputs[digits.length]?.focus();
-    else inputs[5].focus();
-  }
-
-  async function verifyOtp() {
-    const code = getOtpInputs().map(i => i.value).join('');
-    if (code.length < 6) return;
-
-    document.getElementById('verifyBtn').disabled = true;
-    const { error } = await db.auth.verifyOtp({
-      email: pendingEmail,
-      token: code,
-      type: 'signup',
+  el('authBtn').disabled = false;
+}
+function showOtpSection() {
+  el('formSection').classList.add('hidden');
+  el('otpSection').classList.remove('hidden');
+  el('otpSub').textContent = t().otpSub(pendingEmail);
+  buildOtpInputs();
+}
+function buildOtpInputs() {
+  const row = el('otpRow'); row.innerHTML = '';
+  for (let i = 0; i < 6; i++) {
+    const inp = document.createElement('input');
+    inp.type='text'; inp.inputMode='numeric'; inp.maxLength=1; inp.dataset.idx=i;
+    inp.addEventListener('input', e => {
+      e.target.value = e.target.value.replace(/\D/,'').slice(-1);
+      e.target.classList.toggle('filled', !!e.target.value);
+      if (e.target.value && e.target.dataset.idx < 5) otpInputs()[+e.target.dataset.idx+1].focus();
     });
-    document.getElementById('verifyBtn').disabled = false;
-
-    if (error) { showMsg('error', t().errOtp); return; }
-    // session opened → onAuthStateChange fires
+    inp.addEventListener('keydown', e => {
+      if (e.key==='Backspace' && !e.target.value && e.target.dataset.idx>0) otpInputs()[+e.target.dataset.idx-1].focus();
+      if (e.key==='Enter') verifyOtp();
+    });
+    inp.addEventListener('paste', e => {
+      e.preventDefault();
+      const digits = (e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6);
+      const inps = otpInputs();
+      digits.split('').forEach((d,i) => { if(inps[i]) { inps[i].value=d; inps[i].classList.add('filled'); } });
+      (inps[Math.min(digits.length,5)] || inps[5]).focus();
+    });
+    row.appendChild(inp);
   }
+  row.children[0].focus();
+}
+const otpInputs = () => [...el('otpRow').children];
+async function verifyOtp() {
+  const code = otpInputs().map(i=>i.value).join('');
+  if (code.length < 6) return;
+  el('verifyBtn').disabled = true;
+  const { error } = await db.auth.verifyOtp({ email: pendingEmail, token: code, type: 'signup' });
+  el('verifyBtn').disabled = false;
+  if (error) showMsg('authMsg','error', t().errOtp);
+}
+async function resendOtp() {
+  await db.auth.resend({ type: 'signup', email: pendingEmail });
+  showMsg('authMsg','info', t().infoResent||'');
+}
+async function logout() { await db.auth.signOut(); }
 
-  async function resendOtp() {
-    const { error } = await db.auth.resend({ type: 'signup', email: pendingEmail });
-    if (error) { showMsg('error', t().errResend + error.message); return; }
-    showMsg('info', t().infoResent);
+/* ═══════════════ Session ═══════════════ */
+let session = null, currentSpaceId = null, isOwner = false, spaces = [];
+
+db.auth.onAuthStateChange(async (event, s) => {
+  session = s;
+  if (s) {
+    el('authWrap').classList.add('hidden');
+    el('appWrap').classList.remove('hidden');
+    el('userEmail').textContent = s.user.email;
+    await initSpaces();
+    await checkInvitations();
+  } else {
+    el('authWrap').classList.remove('hidden');
+    el('appWrap').classList.add('hidden');
+    el('formSection').classList.remove('hidden');
+    el('otpSection').classList.add('hidden');
+    todos = []; currentSpaceId = null; spaces = [];
   }
+});
 
-  async function logout() {
-    await db.auth.signOut();
+async function initSpaces() {
+  // Get or create the user's own space
+  const { data: ownSpaceId, error } = await db.rpc('get_or_create_my_space', { p_email: session.user.email });
+  if (error) { showMsg('appMsg','error', t().errLoad + error.message); return; }
+
+  // Fetch all spaces the user belongs to (own + joined)
+  const { data: memberRows } = await db.from('space_members')
+    .select('space_id, role, spaces(id, name, owner_id)')
+    .eq('user_id', session.user.id);
+
+  spaces = (memberRows||[]).map(r => ({
+    id: r.spaces.id, name: r.spaces.name,
+    role: r.role, isOwner: r.spaces.owner_id === session.user.id
+  }));
+
+  // Default to own space
+  const saved = localStorage.getItem('lastSpaceId');
+  const target = spaces.find(s=>s.id===saved) || spaces.find(s=>s.isOwner) || spaces[0];
+  await activateSpace(target);
+
+  // Show space selector if multiple
+  if (spaces.length > 1) {
+    const sel = el('spaceSelector');
+    sel.style.display = 'block';
+    sel.innerHTML = spaces.map(s=>`<option value="${s.id}" ${s.id===currentSpaceId?'selected':''}>${s.name}</option>`).join('');
   }
+}
 
-  /* ════════════════ Auth listener ════════════════ */
-  db.auth.onAuthStateChange((event, session) => {
-    if (session) {
-      document.getElementById('authWrap').style.display = 'none';
-      document.getElementById('todoWrap').style.display = 'block';
-      document.getElementById('userEmail').textContent  = session.user.email;
-      loadTodos();
-    } else {
-      document.getElementById('authWrap').style.display = 'block';
-      document.getElementById('todoWrap').style.display = 'none';
-      // Reset auth form
-      document.getElementById('formSection').classList.remove('hidden');
-      document.getElementById('otpSection').classList.add('hidden');
-      todos = [];
-    }
+async function activateSpace(space) {
+  if (!space) return;
+  currentSpaceId = space.id;
+  isOwner = space.isOwner;
+  el('shareBtn').style.display = isOwner ? '' : 'none';
+  localStorage.setItem('lastSpaceId', space.id);
+  await loadTodos();
+  if (currentAppTab === 'activity') await loadActivityLog();
+}
+
+async function switchSpace(spaceId) {
+  const space = spaces.find(s=>s.id===spaceId);
+  if (space) await activateSpace(space);
+}
+
+/* ═══════════════ Invitations ═══════════════ */
+async function checkInvitations() {
+  const { data, error } = await db.rpc('get_my_invitations');
+  if (error || !data?.length) { el('inviteBanner').style.display='none'; return; }
+  el('inviteBanner').style.display = 'block';
+  el('inviteList').innerHTML = data.map(inv => `
+    <div class="invite-item">
+      <div class="inv-info">
+        <strong>${inv.space_name}</strong>
+        <small>${inv.invited_by_email}</small>
+      </div>
+      <div class="invite-actions">
+        <button class="btn-accept" onclick="acceptInvite('${inv.id}','${inv.space_name}')">${t().inviteAccept}</button>
+        <button class="btn-decline" onclick="declineInvite('${inv.id}')">${t().inviteDecline}</button>
+      </div>
+    </div>`).join('');
+}
+async function acceptInvite(invId, spaceName) {
+  const { data: spaceId, error } = await db.rpc('accept_invitation', { p_inv_id: invId });
+  if (error) { showMsg('appMsg','error', error.message); return; }
+  showMsg('appMsg','info', t().infoJoined(spaceName));
+  await initSpaces();
+  await checkInvitations();
+}
+async function declineInvite(invId) {
+  await db.from('invitations').update({ status:'declined' }).eq('id', invId);
+  await checkInvitations();
+}
+
+/* ═══════════════ App tabs ═══════════════ */
+let currentAppTab = 'todos';
+async function switchAppTab(tab) {
+  currentAppTab = tab;
+  el('tabTodos').classList.toggle('active', tab==='todos');
+  el('tabActivity').classList.toggle('active', tab==='activity');
+  el('todoTab').classList.toggle('hidden', tab!=='todos');
+  el('activityTab').classList.toggle('hidden', tab!=='activity');
+  if (tab==='activity') await loadActivityLog();
+}
+
+/* ═══════════════ Todos ═══════════════ */
+let todos = [], filter = 'all';
+
+function setFilter(btn) {
+  filter = btn.dataset.filter;
+  document.querySelectorAll('.filters button').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTodos();
+}
+
+function renderTodos() {
+  const s = t();
+  const visible = todos.filter(td =>
+    filter==='all' ? true : filter==='active' ? !td.done : td.done
+  );
+  const list = el('todoList');
+  list.innerHTML = '';
+  if (!visible.length) { list.innerHTML=`<li class="empty">${s.empty}</li>`; }
+  else visible.forEach(td => {
+    const li = document.createElement('li');
+    li.className = 'todo-item' + (td.done?' done':'');
+    const cb = document.createElement('input');
+    cb.type='checkbox'; cb.checked=td.done;
+    cb.addEventListener('change', ()=>toggleTodo(td, cb.checked));
+    const body = document.createElement('div'); body.className='todo-body';
+    const txt = document.createElement('div'); txt.className='todo-text'; txt.textContent=td.text;
+    const meta = document.createElement('div'); meta.className='todo-meta';
+    meta.textContent = (td.creator_email||'') + (td.created_at ? ' · '+relTime(td.created_at) : '');
+    body.append(txt, meta);
+    const del = document.createElement('button');
+    del.className = 'del-btn' + (isOwner ? '' : ' hidden');
+    del.textContent='✕'; del.addEventListener('click',()=>deleteTodo(td.id));
+    li.append(cb, body, del);
+    list.appendChild(li);
   });
+  const done = todos.filter(td=>td.done).length;
+  el('summary').textContent = todos.length ? s.summary(done, todos.length) : '';
+}
 
-  /* ════════════════ Todos ════════════════ */
-  let todos  = [];
-  let filter = 'all';
+async function loadTodos() {
+  if (!currentSpaceId) return;
+  const { data, error } = await db.from('todos').select('*')
+    .eq('space_id', currentSpaceId).order('created_at',{ascending:false});
+  if (error) { showMsg('appMsg','error', t().errLoad+error.message); return; }
+  todos = data;
+  renderTodos();
+}
 
-  function setFilter(btn) {
-    filter = btn.dataset.filter;
-    document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    renderTodos();
+async function addTodo() {
+  const input = el('todoInput'), text = input.value.trim();
+  if (!text || !currentSpaceId) return;
+  el('addBtn').disabled = true;
+  const { data, error } = await db.from('todos')
+    .insert({ text, done:false, user_id:session.user.id, space_id:currentSpaceId, creator_email:session.user.email })
+    .select().single();
+  el('addBtn').disabled = false;
+  if (error) { showMsg('appMsg','error', t().errAdd+error.message); return; }
+  todos.unshift(data); input.value=''; renderTodos();
+  // Log
+  await db.from('activity_log').insert({ space_id:currentSpaceId, user_id:session.user.id,
+    user_email:session.user.email, action:'todo_added', meta:{text} });
+}
+
+async function toggleTodo(td, done) {
+  const { error } = await db.from('todos').update({done}).eq('id',td.id);
+  if (error) { showMsg('appMsg','error', t().errUpdate+error.message); return; }
+  td.done = done; renderTodos();
+  await db.from('activity_log').insert({ space_id:currentSpaceId, user_id:session.user.id,
+    user_email:session.user.email, action: done?'todo_completed':'todo_uncompleted', meta:{text:td.text} });
+}
+
+async function deleteTodo(id) {
+  const td = todos.find(t=>t.id===id);
+  const { error } = await db.from('todos').delete().eq('id',id);
+  if (error) { showMsg('appMsg','error', t().errDelete+error.message); return; }
+  todos = todos.filter(t=>t.id!==id); renderTodos();
+}
+
+async function clearCompleted() {
+  const ids = todos.filter(t=>t.done).map(t=>t.id);
+  if (!ids.length) return;
+  const { error } = await db.from('todos').delete().in('id',ids);
+  if (error) { showMsg('appMsg','error', t().errClear+error.message); return; }
+  todos = todos.filter(t=>!t.done); renderTodos();
+}
+
+el('todoInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addTodo(); });
+
+/* ═══════════════ Activity log ═══════════════ */
+async function loadActivityLog() {
+  if (!currentSpaceId) return;
+  const { data, error } = await db.from('activity_log').select('*')
+    .eq('space_id', currentSpaceId).order('created_at',{ascending:false}).limit(100);
+  const s = t();
+  if (error || !data?.length) { el('logList').innerHTML=`<div class="empty">${s.logEmpty}</div>`; return; }
+  el('logList').innerHTML = data.map(row => {
+    const actionFn = s.actions[row.action];
+    const icon = s.actionIcons[row.action] || '•';
+    const text = actionFn ? actionFn(row.user_email, row.meta||{}) : row.action;
+    return `<div class="log-item">
+      <div class="log-icon">${icon}</div>
+      <div class="log-body">
+        <div class="log-text">${text}</div>
+        <div class="log-time">${relTime(row.created_at)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════ Share modal ═══════════════ */
+async function openShareModal() {
+  el('shareModal').classList.add('open');
+  el('shareMsg').className='msg';
+  await renderMembers();
+}
+function closeShareModal(e) {
+  if (!e || e.target===el('shareModal')) el('shareModal').classList.remove('open');
+}
+async function renderMembers() {
+  const { data, error } = await db.rpc('get_space_members', { p_space_id: currentSpaceId });
+  if (error) return;
+  const s = t();
+  el('membersList').innerHTML = (data||[]).map(m => `
+    <div class="member-item">
+      <span>${m.user_email}</span>
+      <span class="role-badge ${m.role}">${m.role==='owner'?s.owner:s.member}</span>
+    </div>`).join('');
+  // Pending invitations
+  const { data: invs } = await db.from('invitations')
+    .select('invited_email, created_at').eq('space_id', currentSpaceId).eq('status','pending');
+  if (invs?.length) {
+    el('membersList').innerHTML += invs.map(i=>`
+      <div class="member-item">
+        <span>${i.invited_email}</span>
+        <span class="pending-badge">${s.pending}</span>
+      </div>`).join('');
   }
-
-  function showTodoMsg(type, text) {
-    const el = document.getElementById('todoMsg');
-    el.className = `msg ${type}`;
-    el.textContent = text;
-    el.style.display = 'block';
-    setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+async function sendInvite() {
+  const email = el('inviteEmail').value.trim().toLowerCase();
+  if (!email) return;
+  el('inviteBtn').disabled = true;
+  const { error } = await db.rpc('invite_to_space', { p_space_id: currentSpaceId, p_email: email });
+  el('inviteBtn').disabled = false;
+  if (error) {
+    const msg = error.message.includes('Already') ? t().errAlreadyMember : t().errInvite+error.message;
+    showMsg('shareMsg','error', msg); return;
   }
+  el('inviteEmail').value = '';
+  showMsg('shareMsg','info', t().infoInviteSent(email));
+  await renderMembers();
+}
 
-  function renderTodos() {
-    const s = t();
-    const list = document.getElementById('todoList');
-    const visible = todos.filter(todo =>
-      filter === 'all'    ? true :
-      filter === 'active' ? !todo.done : todo.done
-    );
-
-    list.innerHTML = '';
-    if (visible.length === 0) {
-      list.innerHTML = `<li class="empty">${s.empty}</li>`;
-    } else {
-      visible.forEach(todo => {
-        const li = document.createElement('li');
-        li.className = 'todo-item' + (todo.done ? ' done' : '');
-
-        const cb = document.createElement('input');
-        cb.type = 'checkbox'; cb.checked = todo.done;
-        cb.addEventListener('change', () => toggleTodo(todo, cb.checked));
-
-        const span = document.createElement('span');
-        span.textContent = todo.text;
-
-        const del = document.createElement('button');
-        del.className = 'delete-btn'; del.textContent = '✕';
-        del.addEventListener('click', () => deleteTodo(todo.id));
-
-        li.append(cb, span, del);
-        list.appendChild(li);
-      });
-    }
-
-    const total = todos.length;
-    const done  = todos.filter(todo => todo.done).length;
-    document.getElementById('summary').textContent = total ? s.summary(done, total) : '';
-  }
-
-  async function loadTodos() {
-    const { data, error } = await db.from('todos').select('*').order('created_at', { ascending: false });
-    if (error) { showTodoMsg('error', t().errLoad + error.message); return; }
-    todos = data;
-    renderTodos();
-  }
-
-  async function addTodo() {
-    const input = document.getElementById('todoInput');
-    const text  = input.value.trim();
-    if (!text) return;
-
-    const session = (await db.auth.getSession()).data.session;
-    document.getElementById('addBtn').disabled = true;
-    const { data, error } = await db.from('todos')
-      .insert({ text, done: false, user_id: session.user.id })
-      .select().single();
-    document.getElementById('addBtn').disabled = false;
-
-    if (error) { showTodoMsg('error', t().errAdd + error.message); return; }
-    todos.unshift(data);
-    input.value = '';
-    renderTodos();
-  }
-
-  async function toggleTodo(todo, done) {
-    const { error } = await db.from('todos').update({ done }).eq('id', todo.id);
-    if (error) { showTodoMsg('error', t().errUpdate + error.message); return; }
-    todo.done = done;
-    renderTodos();
-  }
-
-  async function deleteTodo(id) {
-    const { error } = await db.from('todos').delete().eq('id', id);
-    if (error) { showTodoMsg('error', t().errDelete + error.message); return; }
-    todos = todos.filter(t => t.id !== id);
-    renderTodos();
-  }
-
-  async function clearCompleted() {
-    const ids = todos.filter(t => t.done).map(t => t.id);
-    if (!ids.length) return;
-    const { error } = await db.from('todos').delete().in('id', ids);
-    if (error) { showTodoMsg('error', t().errClear + error.message); return; }
-    todos = todos.filter(t => !t.done);
-    renderTodos();
-  }
-
-  document.getElementById('todoInput').addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
-
-  /* ════════════════ Init ════════════════ */
-  setLang(lang);
+/* ═══════════════ Init ═══════════════ */
+setLang(lang);
 </script>
 </body>
 </html>
