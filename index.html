@@ -695,12 +695,33 @@ async function sendInvite() {
   const email = el('inviteEmail').value.trim().toLowerCase();
   if (!email) return;
   el('inviteBtn').disabled = true;
+
+  // 1. DB'ye kayıt
   const { error } = await db.rpc('invite_to_space', { p_space_id: currentSpaceId, p_email: email });
-  el('inviteBtn').disabled = false;
   if (error) {
+    el('inviteBtn').disabled = false;
     const msg = error.message.includes('Already') ? t().errAlreadyMember : t().errInvite+error.message;
     showMsg('shareMsg','error', msg); return;
   }
+
+  // 2. E-posta gönder (Edge Function)
+  const space = spaces.find(s => s.id === currentSpaceId);
+  const { data: { session: s } } = await db.auth.getSession();
+  await fetch(`${SB_URL}/functions/v1/send-invite`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${s.access_token}`,
+    },
+    body: JSON.stringify({
+      space_id:      currentSpaceId,
+      invited_email: email,
+      space_name:    space?.name || '',
+      inviter_email: session.user.email,
+    }),
+  });
+
+  el('inviteBtn').disabled = false;
   el('inviteEmail').value = '';
   showMsg('shareMsg','info', t().infoInviteSent(email));
   await renderMembers();
