@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Todo Uygulaması</title>
+  <title>Yapılacaklar</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -25,6 +25,30 @@
       font-size: 2rem;
       margin-bottom: 24px;
       letter-spacing: -0.5px;
+    }
+
+    .lang-toggle {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 16px;
+      gap: 4px;
+    }
+
+    .lang-toggle button {
+      padding: 4px 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.8rem;
+      color: #888;
+      transition: all 0.2s;
+    }
+
+    .lang-toggle button.active {
+      border-color: #6c63ff;
+      background: #6c63ff;
+      color: #fff;
     }
 
     .input-row { display: flex; gap: 8px; margin-bottom: 16px; }
@@ -126,7 +150,6 @@
     .todo-item .delete-btn:hover { color: #e74c3c; }
 
     .empty { text-align: center; color: #bbb; font-size: 0.95rem; padding: 32px 0; }
-
     .summary { text-align: center; color: #999; font-size: 0.82rem; margin-top: 16px; }
 
     .clear-btn {
@@ -160,31 +183,91 @@
 </head>
 <body>
   <div class="container">
-    <h1>Yapılacaklar</h1>
+    <div class="lang-toggle">
+      <button id="btnTR" onclick="setLang('tr')">TR</button>
+      <button id="btnEN" onclick="setLang('en')">EN</button>
+    </div>
+
+    <h1 id="appTitle"></h1>
 
     <div class="error-msg" id="errorMsg"></div>
 
     <div class="input-row">
-      <input type="text" id="todoInput" placeholder="Yeni görev ekle..." maxlength="200">
-      <button id="addBtn" title="Ekle">+</button>
+      <input type="text" id="todoInput" maxlength="200">
+      <button id="addBtn" title="">+</button>
     </div>
 
     <div class="filters">
-      <button data-filter="all" class="active">Tümü</button>
-      <button data-filter="active">Bekleyen</button>
-      <button data-filter="done">Tamamlanan</button>
+      <button data-filter="all" class="active" id="fAll"></button>
+      <button data-filter="active" id="fActive"></button>
+      <button data-filter="done" id="fDone"></button>
     </div>
 
-    <ul class="todo-list" id="todoList"><li class="loading">Yükleniyor...</li></ul>
+    <ul class="todo-list" id="todoList"><li class="loading" id="loadingMsg"></li></ul>
 
     <p class="summary" id="summary"></p>
-    <button class="clear-btn" id="clearDone">Tamamlananları temizle</button>
+    <button class="clear-btn" id="clearDone"></button>
   </div>
 
   <script>
+    const i18n = {
+      tr: {
+        title:       'Yapılacaklar',
+        placeholder: 'Yeni görev ekle...',
+        all:         'Tümü',
+        active:      'Bekleyen',
+        done:        'Tamamlanan',
+        clear:       'Tamamlananları temizle',
+        loading:     'Yükleniyor...',
+        empty:       'Görev yok',
+        summary:     (d, t) => `${d} / ${t} tamamlandı`,
+        errLoad:     e => 'Veriler yüklenemedi: ' + e,
+        errAdd:      e => 'Görev eklenemedi: ' + e,
+        errUpdate:   e => 'Güncellenemedi: ' + e,
+        errDelete:   e => 'Silinemedi: ' + e,
+        errClear:    e => 'Temizlenemedi: ' + e,
+      },
+      en: {
+        title:       'To-Do List',
+        placeholder: 'Add a new task...',
+        all:         'All',
+        active:      'Pending',
+        done:        'Completed',
+        clear:       'Clear completed',
+        loading:     'Loading...',
+        empty:       'No tasks',
+        summary:     (d, t) => `${d} / ${t} completed`,
+        errLoad:     e => 'Failed to load: ' + e,
+        errAdd:      e => 'Failed to add: ' + e,
+        errUpdate:   e => 'Failed to update: ' + e,
+        errDelete:   e => 'Failed to delete: ' + e,
+        errClear:    e => 'Failed to clear: ' + e,
+      }
+    };
+
+    const browserLang = (navigator.language || navigator.userLanguage || 'tr').toLowerCase();
+    let lang = browserLang.startsWith('en') ? 'en' : 'tr';
+
+    function setLang(l) {
+      lang = l;
+      document.documentElement.lang = l;
+      document.getElementById('btnTR').classList.toggle('active', l === 'tr');
+      document.getElementById('btnEN').classList.toggle('active', l === 'en');
+
+      const t = i18n[l];
+      document.title                              = t.title;
+      document.getElementById('appTitle').textContent  = t.title;
+      document.getElementById('todoInput').placeholder = t.placeholder;
+      document.getElementById('fAll').textContent      = t.all;
+      document.getElementById('fActive').textContent   = t.active;
+      document.getElementById('fDone').textContent     = t.done;
+      document.getElementById('clearDone').textContent = t.clear;
+      document.getElementById('loadingMsg').textContent = t.loading;
+      render();
+    }
+
     const SUPABASE_URL  = 'https://jqqepcdiezcmeimwdqmh.supabase.co';
     const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcWVwY2RpZXpjbWVpbXdkcW1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NTQ5MzIsImV4cCI6MjA5NDIzMDkzMn0.lVYWwNxej6qh_KSG5M3jQMJgDZ65NgVUL6g4tnoNWK0';
-
     const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
     let todos  = [];
@@ -204,22 +287,23 @@
     }
 
     function render() {
-      const visible = todos.filter(t =>
+      const t = i18n[lang];
+      const visible = todos.filter(todo =>
         filter === 'all'    ? true :
-        filter === 'active' ? !t.done :
-                               t.done
+        filter === 'active' ? !todo.done :
+                               todo.done
       );
 
       list.innerHTML = '';
 
       if (visible.length === 0) {
-        list.innerHTML = '<li class="empty">Görev yok</li>';
+        list.innerHTML = `<li class="empty">${t.empty}</li>`;
       } else {
         visible.forEach(todo => {
-          const li   = document.createElement('li');
+          const li = document.createElement('li');
           li.className = 'todo-item' + (todo.done ? ' done' : '');
 
-          const cb   = document.createElement('input');
+          const cb = document.createElement('input');
           cb.type    = 'checkbox';
           cb.checked = todo.done;
           cb.addEventListener('change', () => toggleTodo(todo, cb.checked));
@@ -230,7 +314,6 @@
           const del = document.createElement('button');
           del.className   = 'delete-btn';
           del.textContent = '✕';
-          del.title       = 'Sil';
           del.addEventListener('click', () => deleteTodo(todo.id));
 
           li.append(cb, span, del);
@@ -239,8 +322,8 @@
       }
 
       const total = todos.length;
-      const done  = todos.filter(t => t.done).length;
-      summary.textContent = total ? `${done} / ${total} tamamlandı` : '';
+      const done  = todos.filter(todo => todo.done).length;
+      summary.textContent = total ? t.summary(done, total) : '';
     }
 
     async function loadTodos() {
@@ -249,7 +332,7 @@
         .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) { showError('Veriler yüklenemedi: ' + error.message); return; }
+      if (error) { showError(i18n[lang].errLoad(error.message)); return; }
       todos = data;
       render();
     }
@@ -264,54 +347,40 @@
         .insert({ text, done: false })
         .select()
         .single();
-
       addBtn.disabled = false;
 
-      if (error) { showError('Görev eklenemedi: ' + error.message); return; }
+      if (error) { showError(i18n[lang].errAdd(error.message)); return; }
       todos.unshift(data);
       input.value = '';
       render();
     }
 
     async function toggleTodo(todo, done) {
-      const { error } = await db
-        .from('todos')
-        .update({ done })
-        .eq('id', todo.id);
-
-      if (error) { showError('Güncellenemedi: ' + error.message); return; }
+      const { error } = await db.from('todos').update({ done }).eq('id', todo.id);
+      if (error) { showError(i18n[lang].errUpdate(error.message)); return; }
       todo.done = done;
       render();
     }
 
     async function deleteTodo(id) {
-      const { error } = await db
-        .from('todos')
-        .delete()
-        .eq('id', id);
-
-      if (error) { showError('Silinemedi: ' + error.message); return; }
+      const { error } = await db.from('todos').delete().eq('id', id);
+      if (error) { showError(i18n[lang].errDelete(error.message)); return; }
       todos = todos.filter(t => t.id !== id);
       render();
     }
 
-    async function clearDone() {
-      const doneIds = todos.filter(t => t.done).map(t => t.id);
-      if (!doneIds.length) return;
-
-      const { error } = await db
-        .from('todos')
-        .delete()
-        .in('id', doneIds);
-
-      if (error) { showError('Temizlenemedi: ' + error.message); return; }
+    async function clearCompleted() {
+      const ids = todos.filter(t => t.done).map(t => t.id);
+      if (!ids.length) return;
+      const { error } = await db.from('todos').delete().in('id', ids);
+      if (error) { showError(i18n[lang].errClear(error.message)); return; }
       todos = todos.filter(t => !t.done);
       render();
     }
 
     addBtn.addEventListener('click', addTodo);
     input.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
-    clearBtn.addEventListener('click', clearDone);
+    clearBtn.addEventListener('click', clearCompleted);
 
     document.querySelectorAll('.filters button').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -322,6 +391,7 @@
       });
     });
 
+    setLang(lang);
     loadTodos();
   </script>
 </body>
