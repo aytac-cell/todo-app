@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Todo Uygulaması</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f0f2f5;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      padding: 40px 16px;
+    }
+
+    .container { width: 100%; max-width: 500px; }
+
+    h1 {
+      text-align: center;
+      color: #1a1a2e;
+      font-size: 2rem;
+      margin-bottom: 24px;
+      letter-spacing: -0.5px;
+    }
+
+    .input-row { display: flex; gap: 8px; margin-bottom: 16px; }
+
+    .input-row input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 2px solid #e0e0e0;
+      border-radius: 10px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+      background: #fff;
+    }
+
+    .input-row input:focus { border-color: #6c63ff; }
+
+    .input-row button {
+      padding: 12px 20px;
+      background: #6c63ff;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 1.4rem;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .input-row button:hover { background: #574fd6; }
+    .input-row button:active { transform: scale(0.95); }
+
+    .filters { display: flex; gap: 8px; margin-bottom: 16px; }
+
+    .filters button {
+      flex: 1;
+      padding: 8px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      background: #fff;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: #555;
+      transition: all 0.2s;
+    }
+
+    .filters button.active {
+      border-color: #6c63ff;
+      background: #6c63ff;
+      color: #fff;
+    }
+
+    .todo-list { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+
+    .todo-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: #fff;
+      padding: 14px 16px;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .todo-item input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #6c63ff;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+
+    .todo-item span {
+      flex: 1;
+      font-size: 0.97rem;
+      color: #222;
+      word-break: break-word;
+    }
+
+    .todo-item.done span { text-decoration: line-through; color: #aaa; }
+
+    .todo-item .delete-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: #ccc;
+      font-size: 1.1rem;
+      padding: 4px;
+      border-radius: 6px;
+      transition: color 0.2s;
+      flex-shrink: 0;
+    }
+
+    .todo-item .delete-btn:hover { color: #e74c3c; }
+
+    .empty { text-align: center; color: #bbb; font-size: 0.95rem; padding: 32px 0; }
+
+    .summary { text-align: center; color: #999; font-size: 0.82rem; margin-top: 16px; }
+
+    .clear-btn {
+      display: block;
+      margin: 12px auto 0;
+      padding: 6px 16px;
+      background: none;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      color: #aaa;
+      cursor: pointer;
+      font-size: 0.82rem;
+      transition: all 0.2s;
+    }
+
+    .clear-btn:hover { border-color: #e74c3c; color: #e74c3c; }
+
+    .loading { text-align: center; color: #aaa; padding: 32px 0; font-size: 0.9rem; }
+
+    .error-msg {
+      background: #fee;
+      border: 1px solid #fcc;
+      color: #c33;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      margin-bottom: 12px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Yapılacaklar</h1>
+
+    <div class="error-msg" id="errorMsg"></div>
+
+    <div class="input-row">
+      <input type="text" id="todoInput" placeholder="Yeni görev ekle..." maxlength="200">
+      <button id="addBtn" title="Ekle">+</button>
+    </div>
+
+    <div class="filters">
+      <button data-filter="all" class="active">Tümü</button>
+      <button data-filter="active">Bekleyen</button>
+      <button data-filter="done">Tamamlanan</button>
+    </div>
+
+    <ul class="todo-list" id="todoList"><li class="loading">Yükleniyor...</li></ul>
+
+    <p class="summary" id="summary"></p>
+    <button class="clear-btn" id="clearDone">Tamamlananları temizle</button>
+  </div>
+
+  <script>
+    const SUPABASE_URL  = 'https://jqqepcdiezcmeimwdqmh.supabase.co';
+    const SUPABASE_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpxcWVwY2RpZXpjbWVpbXdkcW1oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg2NTQ5MzIsImV4cCI6MjA5NDIzMDkzMn0.lVYWwNxej6qh_KSG5M3jQMJgDZ65NgVUL6g4tnoNWK0';
+
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+
+    let todos  = [];
+    let filter = 'all';
+
+    const input    = document.getElementById('todoInput');
+    const addBtn   = document.getElementById('addBtn');
+    const list     = document.getElementById('todoList');
+    const summary  = document.getElementById('summary');
+    const clearBtn = document.getElementById('clearDone');
+    const errorMsg = document.getElementById('errorMsg');
+
+    function showError(msg) {
+      errorMsg.textContent = msg;
+      errorMsg.style.display = 'block';
+      setTimeout(() => { errorMsg.style.display = 'none'; }, 4000);
+    }
+
+    function render() {
+      const visible = todos.filter(t =>
+        filter === 'all'    ? true :
+        filter === 'active' ? !t.done :
+                               t.done
+      );
+
+      list.innerHTML = '';
+
+      if (visible.length === 0) {
+        list.innerHTML = '<li class="empty">Görev yok</li>';
+      } else {
+        visible.forEach(todo => {
+          const li   = document.createElement('li');
+          li.className = 'todo-item' + (todo.done ? ' done' : '');
+
+          const cb   = document.createElement('input');
+          cb.type    = 'checkbox';
+          cb.checked = todo.done;
+          cb.addEventListener('change', () => toggleTodo(todo, cb.checked));
+
+          const span = document.createElement('span');
+          span.textContent = todo.text;
+
+          const del = document.createElement('button');
+          del.className   = 'delete-btn';
+          del.textContent = '✕';
+          del.title       = 'Sil';
+          del.addEventListener('click', () => deleteTodo(todo.id));
+
+          li.append(cb, span, del);
+          list.appendChild(li);
+        });
+      }
+
+      const total = todos.length;
+      const done  = todos.filter(t => t.done).length;
+      summary.textContent = total ? `${done} / ${total} tamamlandı` : '';
+    }
+
+    async function loadTodos() {
+      const { data, error } = await db
+        .from('todos')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) { showError('Veriler yüklenemedi: ' + error.message); return; }
+      todos = data;
+      render();
+    }
+
+    async function addTodo() {
+      const text = input.value.trim();
+      if (!text) return;
+
+      addBtn.disabled = true;
+      const { data, error } = await db
+        .from('todos')
+        .insert({ text, done: false })
+        .select()
+        .single();
+
+      addBtn.disabled = false;
+
+      if (error) { showError('Görev eklenemedi: ' + error.message); return; }
+      todos.unshift(data);
+      input.value = '';
+      render();
+    }
+
+    async function toggleTodo(todo, done) {
+      const { error } = await db
+        .from('todos')
+        .update({ done })
+        .eq('id', todo.id);
+
+      if (error) { showError('Güncellenemedi: ' + error.message); return; }
+      todo.done = done;
+      render();
+    }
+
+    async function deleteTodo(id) {
+      const { error } = await db
+        .from('todos')
+        .delete()
+        .eq('id', id);
+
+      if (error) { showError('Silinemedi: ' + error.message); return; }
+      todos = todos.filter(t => t.id !== id);
+      render();
+    }
+
+    async function clearDone() {
+      const doneIds = todos.filter(t => t.done).map(t => t.id);
+      if (!doneIds.length) return;
+
+      const { error } = await db
+        .from('todos')
+        .delete()
+        .in('id', doneIds);
+
+      if (error) { showError('Temizlenemedi: ' + error.message); return; }
+      todos = todos.filter(t => !t.done);
+      render();
+    }
+
+    addBtn.addEventListener('click', addTodo);
+    input.addEventListener('keydown', e => { if (e.key === 'Enter') addTodo(); });
+    clearBtn.addEventListener('click', clearDone);
+
+    document.querySelectorAll('.filters button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        filter = btn.dataset.filter;
+        document.querySelectorAll('.filters button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        render();
+      });
+    });
+
+    loadTodos();
+  </script>
+</body>
+</html>
