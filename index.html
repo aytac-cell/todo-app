@@ -451,7 +451,13 @@ db.auth.onAuthStateChange(async (event, s) => {
     el('authWrap').classList.add('hidden');
     el('appWrap').classList.remove('hidden');
     el('userEmail').textContent = s.user.email;
+    // Disable input until spaces load
+    el('todoInput').disabled = true;
+    el('addBtn').disabled = true;
     await initSpaces();
+    el('todoInput').disabled = false;
+    el('addBtn').disabled = false;
+    el('todoInput').focus();
     await checkInvitations();
   } else {
     el('authWrap').classList.remove('hidden');
@@ -600,17 +606,24 @@ async function loadTodos() {
 
 async function addTodo() {
   const input = el('todoInput'), text = input.value.trim();
-  if (!text || !currentSpaceId) return;
+  if (!text) return;
+  if (!currentSpaceId) {
+    showMsg('appMsg','error', lang==='tr' ? 'Liste yükleniyor, lütfen bekleyin…' : 'List is loading, please wait…');
+    return;
+  }
   el('addBtn').disabled = true;
-  const { data, error } = await db.from('todos')
-    .insert({ text, done:false, user_id:session.user.id, space_id:currentSpaceId, creator_email:session.user.email })
-    .select().single();
-  el('addBtn').disabled = false;
-  if (error) { showMsg('appMsg','error', t().errAdd+error.message); return; }
-  todos.unshift(data); input.value=''; renderTodos();
-  // Log
-  await db.from('activity_log').insert({ space_id:currentSpaceId, user_id:session.user.id,
-    user_email:session.user.email, action:'todo_added', meta:{text} });
+  try {
+    const { data, error } = await db.from('todos')
+      .insert({ text, done:false, user_id:session.user.id, space_id:currentSpaceId, creator_email:session.user.email })
+      .select().single();
+    if (error) { showMsg('appMsg','error', t().errAdd+error.message); return; }
+    todos.unshift(data); input.value=''; renderTodos();
+    // Log
+    await db.from('activity_log').insert({ space_id:currentSpaceId, user_id:session.user.id,
+      user_email:session.user.email, action:'todo_added', meta:{text} });
+  } finally {
+    el('addBtn').disabled = false;
+  }
 }
 
 async function toggleTodo(td, done) {
