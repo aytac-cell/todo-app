@@ -685,17 +685,18 @@ async function loadTodos() {
     .eq('space_id', currentSpaceId).order('created_at',{ascending:false});
   if (error) { showMsg('appMsg','error', t().errLoad+error.message); return; }
   todos = data;
-  // Bulk-load sub_tasks
-  subTasks = {};
+  // Bulk-load sub_tasks — build locally then assign atomically to avoid race duplicates
   const ids = (todos||[]).map(td => td.id);
+  const newSubTasks = {};
   if (ids.length) {
     const { data: subs } = await db.from('sub_tasks')
       .select('*').in('todo_id', ids).order('created_at',{ascending:true});
     (subs||[]).forEach(s => {
-      if (!subTasks[s.todo_id]) subTasks[s.todo_id] = [];
-      subTasks[s.todo_id].push(s);
+      if (!newSubTasks[s.todo_id]) newSubTasks[s.todo_id] = [];
+      newSubTasks[s.todo_id].push(s);
     });
   }
+  subTasks = newSubTasks;
   renderTodos();
 }
 
