@@ -446,6 +446,9 @@ async function logout() { await db.auth.signOut(); }
 let session = null, currentSpaceId = null, isOwner = false, spaces = [];
 
 db.auth.onAuthStateChange(async (event, s) => {
+  // Token yenileme başarısız → otomatik çıkış yap
+  if (event === 'TOKEN_REFRESHED' && !s) { await db.auth.signOut(); return; }
+  if (event === 'SIGNED_OUT') { s = null; }
   session = s;
   if (s) {
     el('authWrap').classList.add('hidden');
