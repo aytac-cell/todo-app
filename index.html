@@ -729,13 +729,12 @@ async function toggleTodo(td, done) {
   await db.from('activity_log').insert({ space_id:currentSpaceId, user_id:session.user.id,
     user_email:session.user.email, action: done?'todo_completed':'todo_uncompleted', meta:{text:td.text} });
   // Atanmış görev tamamlandıysa owner'a bildirim e-postası gönder (fire & forget)
-  if (done && td.assigned_to) {
-    const { data: { session: s } } = await db.auth.getSession();
+  if (done && td.assigned_to && session?.access_token) {
     fetch(`${SB_URL}/functions/v1/send-task-notification`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${s.access_token}` },
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
       body: JSON.stringify({ type: 'completed', todo_text: td.text, assigned_email: session.user.email, space_id: currentSpaceId }),
-    });
+    }).catch(e => console.error('notify-completed:', e));
   }
 }
 
@@ -785,17 +784,16 @@ async function assignTodo(todoId, userId, email) {
     meta: { text: td?.text, assigned_to: userId ? email : null }
   });
   // Atama yapıldıysa: atanan kişiye bildirim + 1 dk sonra hatırlatma (fire & forget)
-  if (userId) {
-    const { data: { session: s } } = await db.auth.getSession();
-    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${s.access_token}` };
+  if (userId && session?.access_token) {
+    const notifHeaders = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` };
     fetch(`${SB_URL}/functions/v1/send-task-notification`, {
-      method: 'POST', headers,
+      method: 'POST', headers: notifHeaders,
       body: JSON.stringify({ type: 'assigned', todo_text: td?.text, assigned_email: email, space_id: currentSpaceId }),
-    });
+    }).catch(e => console.error('notify-assigned:', e));
     fetch(`${SB_URL}/functions/v1/send-task-reminder`, {
-      method: 'POST', headers,
+      method: 'POST', headers: notifHeaders,
       body: JSON.stringify({ todo_id: todoId, todo_text: td?.text, assigned_email: email }),
-    });
+    }).catch(e => console.error('notify-reminder:', e));
   }
 }
 
