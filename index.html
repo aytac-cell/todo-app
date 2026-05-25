@@ -454,10 +454,13 @@ db.auth.onAuthStateChange(async (event, s) => {
     // Disable input until spaces load
     el('todoInput').disabled = true;
     el('addBtn').disabled = true;
-    await initSpaces();
-    el('todoInput').disabled = false;
-    el('addBtn').disabled = false;
-    el('todoInput').focus();
+    try {
+      await initSpaces();
+    } finally {
+      el('todoInput').disabled = false;
+      el('addBtn').disabled = false;
+      el('todoInput').focus();
+    }
     await checkInvitations();
   } else {
     el('authWrap').classList.remove('hidden');
