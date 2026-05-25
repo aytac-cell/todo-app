@@ -728,6 +728,15 @@ async function toggleTodo(td, done) {
   td.done = done; renderTodos();
   await db.from('activity_log').insert({ space_id:currentSpaceId, user_id:session.user.id,
     user_email:session.user.email, action: done?'todo_completed':'todo_uncompleted', meta:{text:td.text} });
+  // Atanmış görev tamamlandıysa owner'a bildirim e-postası gönder (fire & forget)
+  if (done && td.assigned_to) {
+    const { data: { session: s } } = await db.auth.getSession();
+    fetch(`${SB_URL}/functions/v1/send-task-notification`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${s.access_token}` },
+      body: JSON.stringify({ type: 'completed', todo_text: td.text, assigned_email: session.user.email, space_id: currentSpaceId }),
+    });
+  }
 }
 
 async function deleteTodo(id) {
@@ -775,6 +784,19 @@ async function assignTodo(todoId, userId, email) {
     user_email: session.user.email, action: 'todo_assigned',
     meta: { text: td?.text, assigned_to: userId ? email : null }
   });
+  // Atama yapıldıysa: atanan kişiye bildirim + 1 dk sonra hatırlatma (fire & forget)
+  if (userId) {
+    const { data: { session: s } } = await db.auth.getSession();
+    const headers = { 'Content-Type': 'application/json', 'Authorization': `Bearer ${s.access_token}` };
+    fetch(`${SB_URL}/functions/v1/send-task-notification`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ type: 'assigned', todo_text: td?.text, assigned_email: email, space_id: currentSpaceId }),
+    });
+    fetch(`${SB_URL}/functions/v1/send-task-reminder`, {
+      method: 'POST', headers,
+      body: JSON.stringify({ todo_id: todoId, todo_text: td?.text, assigned_email: email }),
+    });
+  }
 }
 
 async function addSubTask(todoId, inputEl) {
