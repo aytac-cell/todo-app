@@ -129,6 +129,23 @@
 
     .hidden { display: none !important; }
 
+    /* Sub-tasks & assignment */
+    .todo-item { align-items: flex-start; }
+    .todo-item > input[type=checkbox] { margin-top: 3px; }
+    .subtask-list { list-style:none; padding-left:16px; margin-top:5px; border-left:2px solid #ede9ff; }
+    .subtask-item { display:flex; align-items:center; gap:8px; padding:3px 0; font-size:.82rem; color:#555; }
+    .subtask-item.done span { text-decoration:line-through; color:#bbb; }
+    .subtask-item input[type=checkbox] { cursor:pointer; width:14px; height:14px; accent-color:#6c63ff; flex-shrink:0; margin-top:0; }
+    .subtask-item input[type=checkbox]:disabled { cursor:not-allowed; opacity:.4; }
+    .assigned-badge { font-size:.72rem; background:#f0f0ff; color:#6c63ff; border-radius:4px; padding:1px 6px; margin-left:4px; white-space:nowrap; }
+    .subtask-form { display:none; margin-top:5px; padding-left:16px; }
+    .subtask-form.open { display:flex; gap:6px; }
+    .subtask-form input { flex:1; padding:5px 8px; border:1px solid #ddd; border-radius:6px; font-size:.82rem; outline:none; }
+    .subtask-form input:focus { border-color:#6c63ff; }
+    .subtask-form button { padding:5px 10px; background:#6c63ff; color:#fff; border:none; border-radius:6px; cursor:pointer; font-size:.82rem; }
+    .subtask-toggle { font-size:.74rem; color:#6c63ff; cursor:pointer; background:none; border:none; padding:2px 0; margin-top:4px; display:inline-block; }
+    .assign-select { font-size:.74rem; border:1px solid #e0e0e0; border-radius:6px; padding:2px 6px; color:#555; background:#fff; cursor:pointer; margin-top:4px; }
+
     .version-bar {
       text-align: center;
       font-size: .72rem;
@@ -262,8 +279,9 @@ const i18n = {
       todo_uncompleted:(e,m)=>`<span class="log-email">${e}</span> "${m.text}" görevini geri aldı`,
       member_invited:  (e,m)=>`<span class="log-email">${e}</span>, <b>${m.email}</b> adresini davet etti`,
       member_joined:   (e,m)=>`<span class="log-email">${e}</span> listeye katıldı`,
+      todo_assigned:   (e,m)=>`<span class="log-email">${e}</span> "${m.text}" görevini ${m.assigned_to ? '<b>'+m.assigned_to+'</b>\'a' : 'kimseye (kaldırıldı)'} atadı`,
     },
-    actionIcons:{ todo_added:'📝', todo_completed:'✅', todo_uncompleted:'↩️', member_invited:'📨', member_joined:'👋' },
+    actionIcons:{ todo_added:'📝', todo_completed:'✅', todo_uncompleted:'↩️', member_invited:'📨', member_joined:'👋', todo_assigned:'👤' },
     errAuth:'E-posta veya şifre hatalı.', errSignup:'Kayıt hatası: ', errOtp:'Kod hatalı veya süresi dolmuş.',
     errInvite:'Davet gönderilemedi: ', errAlreadyMember:'Bu e-posta zaten üye.',
     errLoad:'Yüklenemedi: ', errAdd:'Eklenemedi: ', errUpdate:'Güncellenemedi: ',
@@ -291,8 +309,9 @@ const i18n = {
       todo_uncompleted:(e,m)=>`<span class="log-email">${e}</span> unchecked "${m.text}"`,
       member_invited:  (e,m)=>`<span class="log-email">${e}</span> invited <b>${m.email}</b>`,
       member_joined:   (e,m)=>`<span class="log-email">${e}</span> joined the list`,
+      todo_assigned:   (e,m)=>`<span class="log-email">${e}</span> assigned "${m.text}" to ${m.assigned_to ? '<b>'+m.assigned_to+'</b>' : 'nobody (removed)'}`,
     },
-    actionIcons:{ todo_added:'📝', todo_completed:'✅', todo_uncompleted:'↩️', member_invited:'📨', member_joined:'👋' },
+    actionIcons:{ todo_added:'📝', todo_completed:'✅', todo_uncompleted:'↩️', member_invited:'📨', member_joined:'👋', todo_assigned:'👤' },
     errAuth:'Invalid email or password.', errSignup:'Sign up error: ', errOtp:'Invalid or expired code.',
     errInvite:'Failed to invite: ', errAlreadyMember:'This email is already a member.',
     errLoad:'Load failed: ', errAdd:'Add failed: ', errUpdate:'Update failed: ',
@@ -444,6 +463,7 @@ async function logout() { await db.auth.signOut(); }
 
 /* ═══════════════ Session ═══════════════ */
 let session = null, currentSpaceId = null, isOwner = false, spaces = [];
+let subTasks = {}, spaceUsers = [];
 
 db.auth.onAuthStateChange((event, s) => {
   // Supabase v2: onAuthStateChange auth lock tutar.
@@ -516,6 +536,9 @@ async function activateSpace(space) {
   isOwner = space.isOwner;
   el('shareBtn').style.display = isOwner ? '' : 'none';
   localStorage.setItem('lastSpaceId', space.id);
+  // Load space members for assign dropdown
+  const { data: members } = await db.rpc('get_space_members', { p_space_id: space.id });
+  spaceUsers = (members||[]).map(m => ({ user_id: m.user_id||'', user_email: m.user_email }));
   await loadTodos();
   if (currentAppTab === 'activity') await loadActivityLog();
 }
@@ -575,6 +598,10 @@ function setFilter(btn) {
   renderTodos();
 }
 
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
 function renderTodos() {
   const s = t();
   const visible = todos.filter(td =>
@@ -586,17 +613,65 @@ function renderTodos() {
   else visible.forEach(td => {
     const li = document.createElement('li');
     li.className = 'todo-item' + (td.done?' done':'');
+
     const cb = document.createElement('input');
     cb.type='checkbox'; cb.checked=td.done;
     cb.addEventListener('change', ()=>toggleTodo(td, cb.checked));
+
     const body = document.createElement('div'); body.className='todo-body';
     const txt = document.createElement('div'); txt.className='todo-text'; txt.textContent=td.text;
+
     const meta = document.createElement('div'); meta.className='todo-meta';
-    meta.textContent = (td.creator_email||'') + (td.created_at ? ' · '+relTime(td.created_at) : '');
-    body.append(txt, meta);
+    const metaText = escHtml((td.creator_email||'') + (td.created_at ? ' · '+relTime(td.created_at) : ''));
+    meta.innerHTML = metaText + (td.assigned_email
+      ? ` <span class="assigned-badge">👤 ${escHtml(td.assigned_email)}</span>` : '');
+
+    // Sub-tasks
+    const subs = subTasks[td.id] || [];
+    const canComplete = canCompleteSubtask(td);
+    const subPlaceholder = lang==='tr' ? 'Alt görev...' : 'Sub-task...';
+    const subToggleLabel = lang==='tr'
+      ? `＋ Alt görev (${subs.length})`
+      : `＋ Sub-task (${subs.length})`;
+
+    const subListHtml = subs.length ? `<ul class="subtask-list">${subs.map(sub => `
+      <li class="subtask-item${sub.done?' done':''}">
+        <input type="checkbox" ${sub.done?'checked':''} ${canComplete?'':'disabled'}
+          onchange="toggleSubTask(${td.id},${sub.id},this.checked)">
+        <span>${escHtml(sub.text)}</span>
+      </li>`).join('')}</ul>` : '';
+
+    const subContainer = document.createElement('div');
+    subContainer.innerHTML = `${subListHtml}
+      <button class="subtask-toggle" onclick="toggleSubForm(${td.id})">${subToggleLabel}</button>
+      <div class="subtask-form" id="subform-${td.id}">
+        <input type="text" placeholder="${subPlaceholder}"
+          onkeydown="if(event.key==='Enter') addSubTask(${td.id},this)">
+        <button onclick="addSubTask(${td.id},this.previousElementSibling)">+</button>
+      </div>`;
+
+    body.append(txt, meta, subContainer);
+
+    // Assign dropdown — owner only
+    if (isOwner && spaceUsers.length > 0) {
+      const sel = document.createElement('select');
+      sel.className = 'assign-select';
+      sel.title = lang==='tr' ? 'Ata' : 'Assign';
+      sel.innerHTML = `<option value="">👤 ${lang==='tr'?'Ata':'Assign'}</option>` +
+        spaceUsers.map(u =>
+          `<option value="${escHtml(u.user_id)}" ${td.assigned_to===u.user_id?'selected':''}>${escHtml(u.user_email)}</option>`
+        ).join('');
+      sel.addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        assignTodo(td.id, this.value, opt.text);
+      });
+      body.appendChild(sel);
+    }
+
     const del = document.createElement('button');
     del.className = 'del-btn' + (isOwner ? '' : ' hidden');
     del.textContent='✕'; del.addEventListener('click',()=>deleteTodo(td.id));
+
     li.append(cb, body, del);
     list.appendChild(li);
   });
@@ -610,6 +685,17 @@ async function loadTodos() {
     .eq('space_id', currentSpaceId).order('created_at',{ascending:false});
   if (error) { showMsg('appMsg','error', t().errLoad+error.message); return; }
   todos = data;
+  // Bulk-load sub_tasks
+  subTasks = {};
+  const ids = (todos||[]).map(td => td.id);
+  if (ids.length) {
+    const { data: subs } = await db.from('sub_tasks')
+      .select('*').in('todo_id', ids).order('created_at',{ascending:true});
+    (subs||[]).forEach(s => {
+      if (!subTasks[s.todo_id]) subTasks[s.todo_id] = [];
+      subTasks[s.todo_id].push(s);
+    });
+  }
   renderTodos();
 }
 
@@ -659,6 +745,69 @@ async function clearCompleted() {
 }
 
 el('todoInput').addEventListener('keydown', e=>{ if(e.key==='Enter') addTodo(); });
+
+/* ═══════════════ Sub-tasks & Assignment ═══════════════ */
+function canCompleteSubtask(todo) {
+  if (!todo.assigned_to) return true; // unassigned → everyone
+  return session && todo.assigned_to === session.user.id;
+}
+
+function toggleSubForm(todoId) {
+  const f = document.getElementById('subform-' + todoId);
+  if (!f) return;
+  f.classList.toggle('open');
+  if (f.classList.contains('open')) f.querySelector('input').focus();
+}
+
+async function assignTodo(todoId, userId, email) {
+  const { error } = await db.rpc('assign_todo', {
+    p_todo_id: todoId,
+    p_user_id: userId || null,
+    p_email:   userId ? email : null
+  });
+  if (error) { showMsg('appMsg','error', error.message); renderTodos(); return; }
+  const td = todos.find(t => t.id === todoId);
+  if (td) { td.assigned_to = userId || null; td.assigned_email = userId ? email : null; }
+  renderTodos();
+  await db.from('activity_log').insert({
+    space_id: currentSpaceId, user_id: session.user.id,
+    user_email: session.user.email, action: 'todo_assigned',
+    meta: { text: td?.text, assigned_to: userId ? email : null }
+  });
+}
+
+async function addSubTask(todoId, inputEl) {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  const { data, error } = await db.from('sub_tasks').insert({
+    todo_id: todoId, space_id: currentSpaceId,
+    text, done: false,
+    creator_id: session.user.id, creator_email: session.user.email
+  }).select().single();
+  if (error) { showMsg('appMsg','error', t().errAdd + error.message); return; }
+  if (!subTasks[todoId]) subTasks[todoId] = [];
+  subTasks[todoId].push(data);
+  inputEl.value = '';
+  renderTodos();
+  // Re-open the form after render
+  setTimeout(() => toggleSubForm(todoId), 0);
+}
+
+async function toggleSubTask(todoId, subId, done) {
+  const td = todos.find(t => t.id === todoId);
+  if (!canCompleteSubtask(td)) {
+    showMsg('appMsg','warn', lang==='tr'
+      ? 'Bu görevi sadece atanan kişi tamamlayabilir.'
+      : 'Only the assigned person can complete this sub-task.');
+    renderTodos(); // reset checkbox visual
+    return;
+  }
+  const { error } = await db.from('sub_tasks').update({ done }).eq('id', subId);
+  if (error) { showMsg('appMsg','error', t().errUpdate + error.message); renderTodos(); return; }
+  const sub = (subTasks[todoId]||[]).find(s => s.id === subId);
+  if (sub) sub.done = done;
+  renderTodos();
+}
 
 /* ═══════════════ Activity log ═══════════════ */
 async function loadActivityLog() {
