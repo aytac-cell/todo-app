@@ -74,7 +74,7 @@ async function sendEmail(to: string, subject: string, html: string) {
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
-      'api-key': Deno.env.get('BREVO_KEY')!,
+      'api-key': Deno.env.get('BREVO_API_KEY')!,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
