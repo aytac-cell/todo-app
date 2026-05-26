@@ -120,6 +120,8 @@
     .role-badge.owner  { background: #ede9ff; color: #6c63ff; }
     .role-badge.member { background: #f0f2f5; color: #888; }
     .pending-badge { font-size: .7rem; padding: 2px 7px; border-radius: 20px; background: #fff8e1; color: #f59e0b; font-weight: 600; }
+    .btn-remove-member { background: none; border: none; color: #ddd; cursor: pointer; font-size: .85rem; padding: 2px 5px; border-radius: 4px; transition: color .2s; }
+    .btn-remove-member:hover { color: #e74c3c; }
     .invite-form { display: flex; gap: 8px; margin-top: 16px; }
     .invite-form input { flex: 1; padding: 9px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: .87rem; outline: none; transition: border-color .2s; }
     .invite-form input:focus { border-color: #6c63ff; }
@@ -280,8 +282,9 @@ const i18n = {
       member_invited:  (e,m)=>`<span class="log-email">${e}</span>, <b>${m.email}</b> adresini davet etti`,
       member_joined:   (e,m)=>`<span class="log-email">${e}</span> listeye katıldı`,
       todo_assigned:   (e,m)=>`<span class="log-email">${e}</span> "${m.text}" görevini ${m.assigned_to ? '<b>'+m.assigned_to+'</b>\'a' : 'kimseye (kaldırıldı)'} atadı`,
+      member_removed:  (e,m)=>`<span class="log-email">${e}</span>, <b>${m.email}</b> adresini listeden çıkardı`,
     },
-    actionIcons:{ todo_added:'📝', todo_completed:'✅', todo_uncompleted:'↩️', member_invited:'📨', member_joined:'👋', todo_assigned:'👤' },
+    actionIcons:{ todo_added:'📝', todo_completed:'✅', todo_uncompleted:'↩️', member_invited:'📨', member_joined:'👋', todo_assigned:'👤', member_removed:'🚫' },
     errAuth:'E-posta veya şifre hatalı.', errSignup:'Kayıt hatası: ', errOtp:'Kod hatalı veya süresi dolmuş.',
     errInvite:'Davet gönderilemedi: ', errAlreadyMember:'Bu e-posta zaten üye.',
     errLoad:'Yüklenemedi: ', errAdd:'Eklenemedi: ', errUpdate:'Güncellenemedi: ',
@@ -310,8 +313,9 @@ const i18n = {
       member_invited:  (e,m)=>`<span class="log-email">${e}</span> invited <b>${m.email}</b>`,
       member_joined:   (e,m)=>`<span class="log-email">${e}</span> joined the list`,
       todo_assigned:   (e,m)=>`<span class="log-email">${e}</span> assigned "${m.text}" to ${m.assigned_to ? '<b>'+m.assigned_to+'</b>' : 'nobody (removed)'}`,
+      member_removed:  (e,m)=>`<span class="log-email">${e}</span> removed <b>${m.email}</b> from the list`,
     },
-    actionIcons:{ todo_added:'📝', todo_completed:'✅', todo_uncompleted:'↩️', member_invited:'📨', member_joined:'👋', todo_assigned:'👤' },
+    actionIcons:{ todo_added:'📝', todo_completed:'✅', todo_uncompleted:'↩️', member_invited:'📨', member_joined:'👋', todo_assigned:'👤', member_removed:'🚫' },
     errAuth:'Invalid email or password.', errSignup:'Sign up error: ', errOtp:'Invalid or expired code.',
     errInvite:'Failed to invite: ', errAlreadyMember:'This email is already a member.',
     errLoad:'Load failed: ', errAdd:'Add failed: ', errUpdate:'Update failed: ',
@@ -870,7 +874,12 @@ async function renderMembers() {
   el('membersList').innerHTML = (data||[]).map(m => `
     <div class="member-item">
       <span>${m.user_email}</span>
-      <span class="role-badge ${m.role}">${m.role==='owner'?s.owner:s.member}</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span class="role-badge ${m.role}">${m.role==='owner'?s.owner:s.member}</span>
+        ${isOwner && m.role !== 'owner'
+          ? `<button class="btn-remove-member" onclick="removeMember('${m.user_id}','${m.user_email}')" title="${lang==='tr'?'Çıkar':'Remove'}">✕</button>`
+          : ''}
+      </div>
     </div>`).join('');
   // Pending invitations
   const { data: invs } = await db.from('invitations')
@@ -879,9 +888,31 @@ async function renderMembers() {
     el('membersList').innerHTML += invs.map(i=>`
       <div class="member-item">
         <span>${i.invited_email}</span>
-        <span class="pending-badge">${s.pending}</span>
+        <div style="display:flex;gap:6px;align-items:center">
+          <span class="pending-badge">${s.pending}</span>
+          ${isOwner ? `<button class="btn-remove-member" onclick="cancelInvite('${i.invited_email}')" title="${lang==='tr'?'İptal':'Cancel'}">✕</button>` : ''}
+        </div>
       </div>`).join('');
   }
+}
+
+async function removeMember(userId, email) {
+  if (!confirm(lang==='tr' ? `"${email}" üyeliği iptal edilsin mi?` : `Remove "${email}" from the space?`)) return;
+  const { error } = await db.from('space_members')
+    .delete().eq('space_id', currentSpaceId).eq('user_id', userId);
+  if (error) { showMsg('shareMsg','error', error.message); return; }
+  await db.from('activity_log').insert({
+    space_id: currentSpaceId, user_id: session.user.id,
+    user_email: session.user.email, action: 'member_removed', meta: { email }
+  });
+  await renderMembers();
+}
+
+async function cancelInvite(email) {
+  if (!confirm(lang==='tr' ? `"${email}" daveti iptal edilsin mi?` : `Cancel invite for "${email}"?`)) return;
+  await db.from('invitations').update({ status: 'cancelled' })
+    .eq('space_id', currentSpaceId).eq('invited_email', email);
+  await renderMembers();
 }
 async function sendInvite() {
   const email = el('inviteEmail').value.trim().toLowerCase();
