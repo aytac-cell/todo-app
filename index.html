@@ -122,6 +122,18 @@
     .pending-badge { font-size: .7rem; padding: 2px 7px; border-radius: 20px; background: #fff8e1; color: #f59e0b; font-weight: 600; }
     .btn-remove-member { background: none; border: none; color: #ddd; cursor: pointer; font-size: .85rem; padding: 2px 5px; border-radius: 4px; transition: color .2s; }
     .btn-remove-member:hover { color: #e74c3c; }
+
+    /* Due date */
+    .due-badge { font-size: .72rem; border-radius: 4px; padding: 1px 6px; margin-left: 4px; white-space: nowrap; }
+    .due-badge.future  { background: #e8f5e9; color: #388e3c; }
+    .due-badge.soon    { background: #fff3e0; color: #e65100; }
+    .due-badge.overdue { background: #ffebee; color: #c62828; font-weight:600; }
+    .due-row { display: flex; gap: 6px; margin-top: 5px; align-items: center; flex-wrap: wrap; }
+    .due-row input[type=date], .due-row input[type=time] { border: 1px solid #e0e0e0; border-radius: 6px; padding: 3px 7px; font-size: .78rem; color: #555; background: #fff; outline: none; cursor: pointer; }
+    .due-row input[type=date]:focus, .due-row input[type=time]:focus { border-color: #6c63ff; }
+    .due-row .due-save-btn { padding: 3px 10px; background: #6c63ff; color: #fff; border: none; border-radius: 6px; font-size: .78rem; cursor: pointer; }
+    .due-row .due-clear-btn { padding: 3px 8px; background: none; border: 1px solid #e0e0e0; color: #aaa; border-radius: 6px; font-size: .78rem; cursor: pointer; }
+    .todo-item.overdue { border-left: 3px solid #e74c3c; }
     .invite-form { display: flex; gap: 8px; margin-top: 16px; }
     .invite-form input { flex: 1; padding: 9px 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: .87rem; outline: none; transition: border-color .2s; }
     .invite-form input:focus { border-color: #6c63ff; }
@@ -291,6 +303,7 @@ const i18n = {
     errDelete:'Silinemedi: ', errClear:'Temizlenemedi: ',
     infoInviteSent: e=>`${e} adresine davet gönderildi.`,
     infoJoined: n=>`"${n}" listesine katıldınız.`,
+    dueDate:'Bitiş tarihi', dueSave:'Kaydet', dueClear:'Temizle',
   },
   en: {
     tabSignin:'Sign In', tabSignup:'Sign Up', lblEmail:'Email', lblPassword:'Password',
@@ -322,6 +335,7 @@ const i18n = {
     errDelete:'Delete failed: ', errClear:'Clear failed: ',
     infoInviteSent: e=>`Invitation sent to ${e}.`,
     infoJoined: n=>`You joined "${n}".`,
+    dueDate:'Due date', dueSave:'Save', dueClear:'Clear',
   }
 };
 const browserLang = (navigator.language||'tr').toLowerCase();
@@ -616,7 +630,8 @@ function renderTodos() {
   if (!visible.length) { list.innerHTML=`<li class="empty">${s.empty}</li>`; }
   else visible.forEach(td => {
     const li = document.createElement('li');
-    li.className = 'todo-item' + (td.done?' done':'');
+    li.className = 'todo-item' + (td.done?' done':'') +
+      (td.due_at && !td.done && new Date(td.due_at) < new Date() ? ' overdue' : '');
 
     const cb = document.createElement('input');
     cb.type='checkbox'; cb.checked=td.done;
@@ -628,7 +643,8 @@ function renderTodos() {
     const meta = document.createElement('div'); meta.className='todo-meta';
     const metaText = escHtml((td.creator_email||'') + (td.created_at ? ' · '+relTime(td.created_at) : ''));
     meta.innerHTML = metaText + (td.assigned_email
-      ? ` <span class="assigned-badge">👤 ${escHtml(td.assigned_email)}</span>` : '');
+      ? ` <span class="assigned-badge">👤 ${escHtml(td.assigned_email)}</span>` : '')
+      + dueBadge(td.due_at);
 
     // Sub-tasks
     const subs = subTasks[td.id] || [];
@@ -670,6 +686,24 @@ function renderTodos() {
         assignTodo(td.id, this.value, opt.text);
       });
       body.appendChild(sel);
+
+      // Due date row — sadece atanmış görevler için
+      if (td.assigned_to) {
+        const dueRow = document.createElement('div');
+        dueRow.className = 'due-row';
+        const dueDate = td.due_at ? td.due_at.slice(0,10) : '';
+        const dueTime = td.due_at ? td.due_at.slice(11,16) : '';
+        dueRow.innerHTML = `
+          <span style="font-size:.75rem;color:#888">${t().dueDate}:</span>
+          <input type="date" value="${dueDate}" id="ddate-${td.id}">
+          <input type="time" value="${dueTime}" id="dtime-${td.id}">
+          <button class="due-save-btn" onclick="saveDueDate(${td.id},
+            document.getElementById('ddate-${td.id}').value,
+            document.getElementById('dtime-${td.id}').value)">${t().dueSave}</button>
+          ${td.due_at ? `<button class="due-clear-btn" onclick="saveDueDate(${td.id},'','')">
+            ${t().dueClear}</button>` : ''}`;
+        body.appendChild(dueRow);
+      }
     }
 
     const del = document.createElement('button');
@@ -770,6 +804,28 @@ function toggleSubForm(todoId) {
   if (!f) return;
   f.classList.toggle('open');
   if (f.classList.contains('open')) f.querySelector('input').focus();
+}
+
+function dueBadge(dueAt) {
+  if (!dueAt) return '';
+  const now = new Date(), due = new Date(dueAt), diff = due - now;
+  const locale = lang === 'tr' ? 'tr-TR' : 'en-GB';
+  const label = due.toLocaleDateString(locale, {day:'2-digit',month:'2-digit'})
+    + ' ' + due.toLocaleTimeString(locale, {hour:'2-digit',minute:'2-digit'});
+  if (diff < 0)        return `<span class="due-badge overdue">⏰ ${label}</span>`;
+  if (diff < 86400000) return `<span class="due-badge soon">🕐 ${label}</span>`;
+  return `<span class="due-badge future">📅 ${label}</span>`;
+}
+
+async function saveDueDate(todoId, dateVal, timeVal) {
+  const due_at = dateVal
+    ? new Date(`${dateVal}T${timeVal || '23:59'}`).toISOString()
+    : null;
+  const { error } = await db.rpc('set_due_date', { p_todo_id: todoId, p_due_at: due_at });
+  if (error) { showMsg('appMsg','error', t().errUpdate + error.message); return; }
+  const td = todos.find(t => t.id === todoId);
+  if (td) td.due_at = due_at;
+  renderTodos();
 }
 
 async function assignTodo(todoId, userId, email) {
